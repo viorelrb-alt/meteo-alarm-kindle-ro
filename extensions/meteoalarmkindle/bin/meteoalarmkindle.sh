@@ -16,7 +16,7 @@
 # While running, pressing the power button exits back to the Kindle UI.
 
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin:/mnt/us/libkh/bin
-VERSION=2.062
+VERSION=2.064
 
 DIR=$(cd "$(dirname "$0")/.." && pwd)
 . "$DIR/meteoalarmkindle.conf"
@@ -46,10 +46,56 @@ log() {
 	echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >>"$LOG"
 }
 
+# The log keeps the last LOG_DAYS days (5: today and the 4 before). Once a day (at start and
+# after midnight) the older days are cut off; their error lines go to meteoalarmkindle-erori.log
+# first. An error there is dropped once it is solved: when the main log's last line of the same
+# kind (weather, warnings, air, clock) is a success. Lines without a date (messages of the
+# tools themselves) belong to the day of the line before. Over 2 MB the log is cut anyway.
+ERR_LOG=$DIR/meteoalarmkindle-erori.log
 trim_log() {
 	[ -f "$LOG" ] || return 0
-	if [ "$(wc -c <"$LOG")" -gt 200000 ]; then
-		tail -n 500 "$LOG" >"$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+	tl_cut=$(date -d "@$(($(date +%s) - (${LOG_DAYS:-5} - 1) * 86400))" '+%Y-%m-%d' 2>/dev/null)
+	[ -n "$tl_cut" ] || return 0
+	awk -v cut="$tl_cut" -v outf="$LOG.tmp" -v err="$ERR_LOG" '
+		# The kind of a line: weather (both sources, network, Wi-Fi), warn, air, ntp; or "".
+		function kind(l) {
+			if (l ~ /^....-..-.. ..:..:.. (weather|met|net|wifi):/) return "weather"
+			if (l ~ /^....-..-.. ..:..:.. warn:/) return "warn"
+			if (l ~ /^....-..-.. ..:..:.. air:/) return "air"
+			if (l ~ /^....-..-.. ..:..:.. ntp:/) return "ntp"
+			return ""
+		}
+		function bad(l) { return l ~ /failed|unexpected|not connected|no network|retry|both sources|error/ }
+		# Lines that show the kind works again (others, as "manual refresh", say nothing).
+		function good(l) { return l ~ / (weather: model=|met: via|net: back|warn: via|air: AIR|ntp: synced)/ }
+		BEGIN {
+			# Errors saved earlier.
+			while ((getline l < err) > 0) old[++no] = l
+			close(err)
+		}
+		{
+			if ($0 ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] /) day = substr($0, 1, 10)
+			k = kind($0)
+			if (day != "" && day < cut) {
+				if (k != "" && bad($0)) new[++nn] = $0
+				next
+			}
+			print > outf
+			# The newest line of each kind decides whether its errors are solved.
+			if (k != "" && bad($0)) last[k] = "bad"
+			else if (k != "" && good($0)) last[k] = "ok"
+		}
+		END {
+			printf "" > outf
+			close(outf)
+			printf "" > err
+			for (i = 1; i <= no; i++) if (last[kind(old[i])] != "ok") print old[i] > err
+			for (i = 1; i <= nn; i++) if (last[kind(new[i])] != "ok") print new[i] > err
+			close(err)
+		}' "$LOG" 2>/dev/null && mv "$LOG.tmp" "$LOG"
+	[ -s "$ERR_LOG" ] || rm -f "$ERR_LOG"
+	if [ "$(wc -c <"$LOG")" -gt 2000000 ]; then
+		tail -n 5000 "$LOG" >"$LOG.tmp" && mv "$LOG.tmp" "$LOG"
 	fi
 }
 
@@ -63,11 +109,11 @@ load_lang() {
 		T_UNTIL=until T_NOW=now T_RAIN=Rain T_RAINFROM="Rain from" T_MAX=max
 		T_SNOW=Snow T_SNOWFROM="Snow from" T_RAINW=Raining T_SNOWW=Snowing
 		T_UPDATED=updated T_NODATA="no data since" T_LOADING="Loading weather…"
-		T_UPDATING="updating…" T_RETURN="Returning to Kindle…"
+		T_UPDATING="updating…" T_RETURN="Returning to Kindle…" T_WIFI="restarting Wi-Fi…"
 		T_LIGHTT=LIGHT T_LIGHTOFF="LIGHT OFF" T_LIGHTH1="Swipe up or down" T_LIGHTH2="on the left edge of the screen." T_PICK="Choose county" T_PICKTOWN="choose town"
 		T_BACK=Back T_PAGE=Page T_CLOSE=Close T_NEXT=Next
 		T_FEELS="Feels like" T_WIND=Wind T_HI=High T_LO=Low T_CHARGING=Charging T_CHARGEME="Charge me"
-		T_WARN="YELLOW ORANGE RED" T_WARNCODE=WARNING T_NOWARN="NO WEATHER WARNINGS"
+		T_WARN="YELLOW ORANGE RED" T_WARNCODE=WARNING T_WARNSRC="Source: MeteoAlarm, ANM" T_NOWARN="NO WEATHER WARNINGS"
 		T_DAY1=TOMORROW T_DAY2="DAY AFTER" T_NEXT12="NEXT 12 HOURS" T_NOWMARK=now T_RAINUP=RAIN T_SNOWUP=SNOW
 		T_LEGSNOW=snow T_LEGRAIN=rain T_LEGDRY="no precipitation" T_POP=rain
 		T_SUN=SUN T_UV="UV INDEX" T_POLLEN=POLLEN T_SUNRISE=Sunrise T_SUNSET=Sunset
@@ -84,11 +130,11 @@ load_lang() {
 		T_UNTIL="până la" T_NOW=acum T_RAIN=Ploaie T_RAINFROM="Ploaie de la" T_MAX=maxim
 		T_SNOW=Ninsoare T_SNOWFROM="Ninsoare de la" T_RAINW=Plouă T_SNOWW=Ninge
 		T_UPDATED=actualizat T_NODATA="fără date din" T_LOADING="Se descarcă vremea…"
-		T_UPDATING="se actualizează…" T_RETURN="Revenire la Kindle…"
+		T_UPDATING="se actualizează…" T_RETURN="Revenire la Kindle…" T_WIFI="repornesc Wi-Fi…"
 		T_LIGHTT=LUMINA T_LIGHTOFF="LUMINA STINSĂ" T_LIGHTH1="Glisează în sus sau în jos" T_LIGHTH2="pe marginea stângă a ecranului." T_PICK="Alege județul" T_PICKTOWN="alege localitatea"
 		T_BACK=Înapoi T_PAGE=Pagina T_CLOSE=Închide T_NEXT=Înainte
 		T_FEELS=Resimțit T_WIND=Vânt T_HI=Max T_LO=Min T_CHARGING="Se încarcă" T_CHARGEME="Încarcă bateria"
-		T_WARN="GALBEN PORTOCALIU ROȘU" T_WARNCODE=COD T_NOWARN="FĂRĂ AVERTIZĂRI METEO"
+		T_WARN="GALBEN PORTOCALIU ROȘU" T_WARNCODE=COD T_WARNSRC="Sursa: MeteoAlarm, ANM" T_NOWARN="FĂRĂ AVERTIZĂRI METEO"
 		T_DAY1=MÂINE T_DAY2=POIMÂINE T_NEXT12="URMĂTOARELE 12 ORE" T_NOWMARK=acum T_RAINUP=PLOAIE T_SNOWUP=NINSOARE
 		T_LEGSNOW=ninsoare T_LEGRAIN=ploaie T_LEGDRY="fără precipitații" T_POP=ploaie
 		T_SUN=SOARE T_UV="INDICE UV" T_POLLEN=POLEN T_SUNRISE=Răsărit T_SUNSET=Apus
@@ -157,7 +203,115 @@ json_arr() {
 	echo "$1" | sed -n "s/.*\"$2\":\[\([^]]*\)\].*/\1/p"
 }
 
-# Fetch the forecast and atomically rewrite $WEATHER_ENV. Returns non-zero on failure.
+# Pressure (hPa) and its trend: each reading goes into $PRESS_LOG; the one from about three
+# hours ago (2.5 to 4 h) tells rising (+1 hPa or more), falling (-1) or steady. Sets ptr and
+# rounds press.
+press_trend() {
+	ptr=""
+	[ -n "$press" ] || return 0
+	pnow=$(date +%s)
+	ptr=$(awk -v now="$pnow" -v p="$press" '
+		$1 >= now - 14400 && $1 <= now - 9000 && old == "" { old = $2 }
+		END { if (old != "") { d = p - old; print (d >= 1) ? 1 : (d <= -1) ? 3 : 2 } }' "$PRESS_LOG" 2>/dev/null)
+	{ awk -v now="$pnow" '$1 >= now - 14400' "$PRESS_LOG" 2>/dev/null; echo "$pnow $press"; } >"$PRESS_LOG.tmp" &&
+		mv "$PRESS_LOG.tmp" "$PRESS_LOG"
+	press=$(round "$press")
+}
+
+# The next five days (comma separated daily arrays, today first and skipped): weekday names
+# and day of the month (computed here; BusyBox date cannot parse dates), weather codes, rounded
+# high/low and the day's highest precipitation probability, as W_D_* lines.
+# wx_days TIMES CODES MAXS MINS POPS
+wx_days() {
+	awk -v times="$1" -v codes="$2" -v maxs="$3" -v mins="$4" -v pops="$5" '
+		function r(v,  x) { x = sprintf("%.0f", v); return (x == "-0") ? "0" : x }
+		BEGIN {
+			split("0 3 2 5 0 3 5 1 4 6 2 4", off, " ")
+			split("Dum Lun Mar Mie Joi Vin Sâm", name, " ")
+			n = split(times, t, ","); split(codes, c, ","); split(maxs, hi, ",")
+			split(mins, lo, ","); split(pops, p, ",")
+			ds = ""; dd = ""; cs = ""; his = ""; los = ""; ps = ""
+			for (i = 2; i <= n; i++) {
+				if (hi[i] == "null" || lo[i] == "null") continue
+				gsub(/"/, "", t[i])
+				y = substr(t[i], 1, 4) + 0; m = substr(t[i], 6, 2) + 0; d = substr(t[i], 9, 2) + 0
+				dm = d
+				if (m < 3) y--
+				w = (y + int(y / 4) - int(y / 100) + int(y / 400) + off[m] + d) % 7
+				# BusyBox awk reads `sep (...)` as a call to a function sep: no
+				# parenthesised term directly after a variable in a concatenation.
+				sep = (ds == "") ? "" : " "
+				cv = (c[i] == "null") ? "-1" : c[i]
+				pv = (p[i] == "null") ? 0 : sprintf("%d", p[i])
+				hv = r(hi[i]); lv = r(lo[i])
+				ds = ds sep name[w + 1]
+				dd = dd sep dm
+				cs = cs sep cv; his = his sep hv; los = los sep lv; ps = ps sep pv
+			}
+			printf "W_D_DAYS=\"%s\"\nW_D_DATES=\"%s\"\nW_D_CODES=\"%s\"\n", ds, dd, cs
+			printf "W_D_MAX=\"%s\"\nW_D_MIN=\"%s\"\nW_D_POP=\"%s\"\n", his, los, ps
+		}'
+}
+
+# Per-hour series for the precipitation chart (hour, probability, wet flag, snow flag), the
+# first wet hour, the hour that wet run ends (empty if it outlasts the window), the max
+# probability, and whether most wet hours bring snow (W_SNOW_MAJ=1), as W_* lines.
+# wx_rain TIMES PROBS AMTS CODES SNOWS (comma separated hourly arrays)
+wx_rain() {
+	awk -v times="$1" -v probs="$2" -v amts="$3" -v codes="$4" -v snows="$5" \
+		-v thr="$RAIN_PROBABILITY" '
+		BEGIN {
+			n = split(times, t, ","); split(probs, p, ","); split(amts, a, ",")
+			split(codes, c, ","); split(snows, s, ",")
+			hours = ""; ps = ""; wets = ""; sns = ""; at = ""; stop = ""; maxp = 0; nsn = 0; nrn = 0
+			for (i = 1; i <= n; i++) {
+				gsub(/"/, "", t[i]); hr = substr(t[i], 12, 5)
+				pv = (p[i] == "null") ? 0 : p[i] + 0
+				av = (a[i] == "null") ? 0 : a[i] + 0
+				cv = (c[i] == "null") ? 0 : c[i] + 0
+				sv = (s[i] == "null") ? 0 : s[i] + 0
+				wet = (pv >= thr || av >= 0.1) ? 1 : 0
+				sn = ((cv >= 71 && cv <= 77) || cv == 85 || cv == 86 || sv > 0) ? 1 : 0
+				if (wet) { if (sn) nsn++; else nrn++ }
+				if (pv > maxp) maxp = pv
+				if (at == "" && wet) at = hr
+				else if (at != "" && stop == "" && !wet) stop = hr
+				sep = (i > 1) ? " " : ""
+				hours = hours sep hr
+				ps = ps sep sprintf("%d", pv)
+				wets = wets sep wet
+				sns = sns sep sn
+			}
+			printf "W_HOURS=\"%s\"\nW_PROBS=\"%s\"\nW_WET=\"%s\"\nW_SNOWY=\"%s\"\n", hours, ps, wets, sns
+			printf "W_RAIN_AT=\"%s\"\nW_RAIN_END=\"%s\"\nW_RAIN_MAXP=%d\nW_SNOW_MAJ=%d\n", at, stop, maxp, (nsn > nrn) ? 1 : 0
+		}'
+}
+
+# Write the parsed forecast (temp, code, ..., rain, days) to $WEATHER_ENV atomically.
+# wx_save SOURCE: om (Open-Meteo) or met (MET Norway, the fallback).
+wx_save() {
+	{
+		echo "W_TEMP=$temp"
+		echo "W_CODE=$code"
+		echo "W_PRECIP=${precip:-0}"
+		echo "W_IS_DAY=${is_day:-1}"
+		echo "W_CLOUD=${cloud:-}"
+		echo "W_FEELS=${feels:-}"
+		echo "W_WIND=${wind:-}"
+		echo "W_TMAX=$tmax"
+		echo "W_TMIN=$tmin"
+		echo "W_SUNRISE=$sunrise"
+		echo "W_SUNSET=$sunset"
+		echo "W_UV=$uv"
+		echo "W_HUM=$hum"
+		echo "W_PRESS=$press"
+		echo "W_PRESS_TR=$ptr"
+		echo "$rain"
+		echo "$days"
+		echo "W_SOURCE=$1"
+		echo "W_FETCHED=$(date +%s)"
+	} >"$WEATHER_ENV.tmp" && mv "$WEATHER_ENV.tmp" "$WEATHER_ENV"
+}
 
 # Fetch the forecast and atomically rewrite $WEATHER_ENV. Returns non-zero on failure.
 fetch_weather() {
@@ -248,111 +402,366 @@ fetch_weather() {
 	uv=$(json_arr "$daily" uv_index_max | cut -d, -f1)
 	case $uv in null | "") uv="" ;; *) uv=$(round "$uv") ;; esac
 	[ -n "$hum" ] && hum=$(round "$hum")
-	# Pressure (hPa) and its trend: each reading goes into $PRESS_LOG; the one from about three
-	# hours ago (2.5 to 4 h) tells rising (+1 hPa or more), falling (-1) or steady.
-	ptr=""
-	if [ -n "$press" ]; then
-		pnow=$(date +%s)
-		ptr=$(awk -v now="$pnow" -v p="$press" '
-			$1 >= now - 14400 && $1 <= now - 9000 && old == "" { old = $2 }
-			END { if (old != "") { d = p - old; print (d >= 1) ? 1 : (d <= -1) ? 3 : 2 } }' "$PRESS_LOG" 2>/dev/null)
-		{ awk -v now="$pnow" '$1 >= now - 14400' "$PRESS_LOG" 2>/dev/null; echo "$pnow $press"; } >"$PRESS_LOG.tmp" &&
-			mv "$PRESS_LOG.tmp" "$PRESS_LOG"
-		press=$(round "$press")
-	fi
+	press_trend
 
 	# The next five days (today, the first entry, is skipped): weekday names and day of the
 	# month (computed here; BusyBox date cannot parse dates), weather codes, rounded high/low
 	# and the day's highest precipitation probability.
-	days=$(awk -v times="$(json_arr "$daily" time)" \
-		-v codes="$(json_arr "$daily" weather_code)" \
-		-v maxs="$(json_arr "$daily" temperature_2m_max)" \
-		-v mins="$(json_arr "$daily" temperature_2m_min)" \
-		-v pops="$(json_arr "$daily" precipitation_probability_max)" '
-		function r(v,  x) { x = sprintf("%.0f", v); return (x == "-0") ? "0" : x }
-		BEGIN {
-			split("0 3 2 5 0 3 5 1 4 6 2 4", off, " ")
-			split("Dum Lun Mar Mie Joi Vin Sâm", name, " ")
-			n = split(times, t, ","); split(codes, c, ","); split(maxs, hi, ",")
-			split(mins, lo, ","); split(pops, p, ",")
-			ds = ""; dd = ""; cs = ""; his = ""; los = ""; ps = ""
-			for (i = 2; i <= n; i++) {
-				if (hi[i] == "null" || lo[i] == "null") continue
-				gsub(/"/, "", t[i])
-				y = substr(t[i], 1, 4) + 0; m = substr(t[i], 6, 2) + 0; d = substr(t[i], 9, 2) + 0
-				dm = d
-				if (m < 3) y--
-				w = (y + int(y / 4) - int(y / 100) + int(y / 400) + off[m] + d) % 7
-				# BusyBox awk reads `sep (...)` as a call to a function sep: no
-				# parenthesised term directly after a variable in a concatenation.
-				sep = (ds == "") ? "" : " "
-				cv = (c[i] == "null") ? "-1" : c[i]
-				pv = (p[i] == "null") ? 0 : sprintf("%d", p[i])
-				hv = r(hi[i]); lv = r(lo[i])
-				ds = ds sep name[w + 1]
-				dd = dd sep dm
-				cs = cs sep cv; his = his sep hv; los = los sep lv; ps = ps sep pv
-			}
-			printf "W_D_DAYS=\"%s\"\nW_D_DATES=\"%s\"\nW_D_CODES=\"%s\"\n", ds, dd, cs
-			printf "W_D_MAX=\"%s\"\nW_D_MIN=\"%s\"\nW_D_POP=\"%s\"\n", his, los, ps
-		}')
+	days=$(wx_days "$(json_arr "$daily" time)" "$(json_arr "$daily" weather_code)" \
+		"$(json_arr "$daily" temperature_2m_max)" "$(json_arr "$daily" temperature_2m_min)" \
+		"$(json_arr "$daily" precipitation_probability_max)")
 
 	# Per-hour series for the precipitation chart (hour, probability, wet flag, snow flag), the
 	# first wet hour, the hour that wet run ends (empty if it outlasts the window), the max
 	# probability, and whether most wet hours bring snow (W_SNOW_MAJ=1).
-	rain=$(awk -v times="$(json_arr "$hourly" time)" \
-		-v probs="$(json_arr "$hourly" precipitation_probability)" \
-		-v amts="$(json_arr "$hourly" precipitation)" \
-		-v codes="$(json_arr "$hourly" weather_code)" \
-		-v snows="$(json_arr "$hourly" snowfall)" \
-		-v thr="$RAIN_PROBABILITY" '
-		BEGIN {
-			n = split(times, t, ","); split(probs, p, ","); split(amts, a, ",")
-			split(codes, c, ","); split(snows, s, ",")
-			hours = ""; ps = ""; wets = ""; sns = ""; at = ""; stop = ""; maxp = 0; nsn = 0; nrn = 0
-			for (i = 1; i <= n; i++) {
-				gsub(/"/, "", t[i]); hr = substr(t[i], 12, 5)
-				pv = (p[i] == "null") ? 0 : p[i] + 0
-				av = (a[i] == "null") ? 0 : a[i] + 0
-				cv = (c[i] == "null") ? 0 : c[i] + 0
-				sv = (s[i] == "null") ? 0 : s[i] + 0
-				wet = (pv >= thr || av >= 0.1) ? 1 : 0
-				sn = ((cv >= 71 && cv <= 77) || cv == 85 || cv == 86 || sv > 0) ? 1 : 0
-				if (wet) { if (sn) nsn++; else nrn++ }
-				if (pv > maxp) maxp = pv
-				if (at == "" && wet) at = hr
-				else if (at != "" && stop == "" && !wet) stop = hr
-				sep = (i > 1) ? " " : ""
-				hours = hours sep hr
-				ps = ps sep sprintf("%d", pv)
-				wets = wets sep wet
-				sns = sns sep sn
-			}
-			printf "W_HOURS=\"%s\"\nW_PROBS=\"%s\"\nW_WET=\"%s\"\nW_SNOWY=\"%s\"\n", hours, ps, wets, sns
-			printf "W_RAIN_AT=\"%s\"\nW_RAIN_END=\"%s\"\nW_RAIN_MAXP=%d\nW_SNOW_MAJ=%d\n", at, stop, maxp, (nsn > nrn) ? 1 : 0
-		}')
+	rain=$(wx_rain "$(json_arr "$hourly" time)" "$(json_arr "$hourly" precipitation_probability)" \
+		"$(json_arr "$hourly" precipitation)" "$(json_arr "$hourly" weather_code)" \
+		"$(json_arr "$hourly" snowfall)")
 
-	{
-		echo "W_TEMP=$temp"
-		echo "W_CODE=$code"
-		echo "W_PRECIP=${precip:-0}"
-		echo "W_IS_DAY=${is_day:-1}"
-		echo "W_CLOUD=${cloud:-}"
-		echo "W_FEELS=${feels:-}"
-		echo "W_WIND=${wind:-}"
-		echo "W_TMAX=$tmax"
-		echo "W_TMIN=$tmin"
-		echo "W_SUNRISE=$sunrise"
-		echo "W_SUNSET=$sunset"
-		echo "W_UV=$uv"
-		echo "W_HUM=$hum"
-		echo "W_PRESS=$press"
-		echo "W_PRESS_TR=$ptr"
-		echo "$rain"
-		echo "$days"
-		echo "W_FETCHED=$(date +%s)"
-	} >"$WEATHER_ENV.tmp" && mv "$WEATHER_ENV.tmp" "$WEATHER_ENV"
+	wx_save om
 	return 0
+}
+
+# --- Fallback forecast: MET Norway ---------------------------------------------
+# When Open-Meteo does not answer but the network works, the forecast comes from MET Norway
+# (api.met.no locationforecast 2.0 "complete", free, no key). Its terms ask for a User-Agent
+# that names the app and at most 4 decimals in the coordinates. The answer is in UTC, one
+# entry an hour for about 2.5 days, then every 6 hours. Its weather symbols ("rain",
+# "partlycloudy_day") are mapped to the WMO codes used everywhere else, and sunrise and sunset
+# (not in this API) are computed. Saved like an Open-Meteo forecast, with W_SOURCE=met.
+MET_UA_DEFAULT="MeteoAlarmKindle/$VERSION github.com/viorelrb-alt/meteo-alarm-kindle-ro"
+
+fetch_met() {
+	[ "${MET_FALLBACK:-1}" = 1 ] || return 1
+	mkdir -p "$STATE"
+	mlat=$(awk -v v="$LATITUDE" 'BEGIN { printf "%.4f", v }')
+	mlon=$(awk -v v="$LONGITUDE" 'BEGIN { printf "%.4f", v }')
+	mj=$STATE/met.json
+	via=""
+	# HTTPS first (plain HTTP is only a redirect there); without certificate checks, as the
+	# Kindle's certificate list is old. Plain HTTP as a last try.
+	for u in "https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=$mlat&lon=$mlon" \
+		"http://api.met.no/weatherapi/locationforecast/2.0/complete?lat=$mlat&lon=$mlon"; do
+		if curl -s -f -k -L -m 30 -A "${MET_UA:-$MET_UA_DEFAULT}" -o "$mj.tmp" "$u"; then
+			via=${u%%:*}
+			break
+		fi
+	done
+	if [ -z "$via" ]; then
+		log "met: fetch failed over https and http"
+		return 1
+	fi
+	mv "$mj.tmp" "$mj"
+	# Local time offset now, in seconds (+0200 -> 7200).
+	moff=$(date +%z | awk '{ s = (substr($0, 1, 1) == "-") ? -1 : 1; print s * (substr($0, 2, 2) * 3600 + substr($0, 4, 2) * 60) }')
+	# One timeseries entry a line, spaces dropped (the values hold none).
+	res=$(tr -d ' \t\r\n' <"$mj" | sed 's/{"time":"/\
+{"time":"/g' | awk -v now="$(date +%s)" -v off="$moff" -v lat="$mlat" -v lon="$mlon" -v hours="${RAIN_LOOKAHEAD_HOURS:-12}" '
+		function ep(s,  y, mo, d, days) {
+			y = substr(s, 1, 4) + 0; mo = substr(s, 6, 2) + 0; d = substr(s, 9, 2) + 0
+			if (mo <= 2) { y--; mo += 12 }
+			days = 365 * y + int(y / 4) - int(y / 100) + int(y / 400) + int((153 * (mo - 3) + 2) / 5) + d - 719469
+			return days * 86400 + substr(s, 12, 2) * 3600 + substr(s, 15, 2) * 60
+		}
+		# Local date "YYYY-MM-DDTHH:MM" of local epoch seconds (days since 1970 to y-m-d).
+		function lstr(le,  z, era, doe, yoe, y, doy, mp, d, m, mi) {
+			z = int(le / 86400) + 719468; era = int(z / 146097); doe = z - era * 146097
+			yoe = int((doe - int(doe / 1460) + int(doe / 36524) - int(doe / 146096)) / 365)
+			y = yoe + era * 400; doy = doe - (365 * yoe + int(yoe / 4) - int(yoe / 100))
+			mp = int((5 * doy + 2) / 153); d = doy - int((153 * mp + 2) / 5) + 1
+			m = (mp < 10) ? mp + 3 : mp - 9; if (m <= 2) y++
+			mi = int((le % 86400) / 60)
+			return sprintf("%04d-%02d-%02dT%02d:%02d", y, m, d, int(mi / 60), mi % 60)
+		}
+		# The part of an entry after "NAME":{ up to the next block.
+		function sect(r, n,  i, s, j) {
+			i = index(r, "\"" n "\":{"); if (i == 0) return ""
+			s = substr(r, i + length(n) + 3)
+			j = index(s, "\"next_"); if (j > 0) s = substr(s, 1, j - 1)
+			return s
+		}
+		function num(s, k) {
+			if (!match(s, "\"" k "\":-?[0-9.]+")) return ""
+			return substr(s, RSTART + length(k) + 3, RLENGTH - length(k) - 3) + 0
+		}
+		function symb(s) {
+			if (!match(s, "\"symbol_code\":\"[a-z_]+\"")) return ""
+			return substr(s, RSTART + 15, RLENGTH - 16)
+		}
+		# MET symbol -> WMO code (higher = worse, as Open-Meteo daily codes).
+		function wmo(y) {
+			sub(/_(day|night|polartwilight)$/, "", y)
+			if (y == "") return -1
+			if (index(y, "thunder")) return 95
+			if (y == "clearsky") return 0
+			if (y == "fair") return 1
+			if (y == "partlycloudy") return 2
+			if (y == "cloudy") return 3
+			if (y == "fog") return 45
+			if (y == "lightrain") return 61
+			if (y == "rain") return 63
+			if (y == "heavyrain") return 65
+			if (y == "lightrainshowers") return 80
+			if (y == "rainshowers") return 81
+			if (y == "heavyrainshowers") return 82
+			if (y ~ /^lightsleet/) return 68
+			if (y ~ /sleet/) return 69
+			if (y == "lightsnow") return 71
+			if (y == "snow") return 73
+			if (y == "heavysnow") return 75
+			if (y ~ /^heavysnowshowers/) return 86
+			if (y ~ /snowshowers/) return 85
+			return 3
+		}
+		# A probability when MET gives none (outside the Nordic area): from the amount.
+		function popof(p, a) {
+			if (p != "") return p
+			if (a == "") return 0
+			return (a >= 1) ? 90 : (a >= 0.1) ? 70 : (a > 0) ? 30 : 0
+		}
+		/^\{"time":"/ {
+			t = ep(substr($0, 10, 20)); if (t == 0) next
+			ins = sect($0, "instant"); h1 = sect($0, "next_1_hours"); h6 = sect($0, "next_6_hours")
+			n++; T[n] = t
+			TA[n] = num(ins, "air_temperature")
+			if (h1 != "") { S1[n] = symb(h1); A1[n] = num(h1, "precipitation_amount"); P1[n] = num(h1, "probability_of_precipitation") }
+			if (h6 != "") { S6[n] = symb(h6); A6[n] = num(h6, "precipitation_amount"); P6[n] = num(h6, "probability_of_precipitation")
+				X6[n] = num(h6, "air_temperature_max"); N6[n] = num(h6, "air_temperature_min") }
+			if (cur == 0 || t <= now + 1800) {
+				{
+					cur = n; c_t = TA[n]; c_p = num(ins, "air_pressure_at_sea_level"); c_c = num(ins, "cloud_area_fraction")
+					c_h = num(ins, "relative_humidity"); c_w = num(ins, "wind_speed")
+					c_l = num(ins, "cloud_area_fraction_low"); c_m = num(ins, "cloud_area_fraction_medium")
+				}
+			}
+		}
+		END {
+			if (n == 0 || c_t == "") { print "MET_OK=0"; exit }
+			ld = int((now + off) / 86400)
+			nowm = int(((now + off) % 86400) / 60)
+			printf "mdoy=%d\nnowm=%d\n", ld - int(ep(substr(lstr(now + off), 1, 4) "-01-01T00:00") / 86400) + 1, nowm
+			# Now: the current hour.
+			cs = S1[cur]; if (cs == "") cs = S6[cur]
+			cc = wmo(cs)
+			if (cs ~ /_day$/) isd = 1; else if (cs ~ /_(night|polartwilight)$/) isd = 0; else isd = ""
+			pr = A1[cur]; if (pr == "") pr = 0
+			printf "temp=%.1f\ncode=%d\nprecip=%.1f\nis_day=%s\ncloud=%.0f\nmws=%s\nwind=%.1f\nhum=%.0f\npress=%s\nmsym=%s\nmlow=%s\nmmid=%s\n", c_t, cc, pr, isd, c_c, c_w, c_w * 3.6, c_h, c_p, cs, c_l, c_m
+			# Next 12 hours (entries with a 1-hour block), for the chart.
+			k = 0; ht = ""; hp = ""; ha_ = ""; hc = ""; hs = ""
+			for (i = cur; i <= n && k < hours; i++) {
+				if (S1[i] == "") continue
+				sp = (k > 0) ? "," : ""
+				ht = ht sp "\"" lstr(T[i] + off) "\""
+				hp = hp sp popof(P1[i], A1[i])
+				# No parenthesised term right after a variable (BusyBox awk calls it).
+				av = (A1[i] == "") ? 0 : A1[i]; sv = (S1[i] ~ /snow/) ? 0.1 : 0
+				ha_ = ha_ sp av
+				hc = hc sp wmo(S1[i])
+				hs = hs sp sv
+				k++
+			}
+			printf "h_t=%s\nh_p=%s\nh_a=%s\nh_c=%s\nh_s=%s\n", ht, hp, ha_, hc, hs
+			# Days: today and the next 5 (local dates). High / low from the hourly temperatures
+			# and the 6-hour highs and lows; the worst symbol of the daytime blocks (06-18).
+			for (i = 1; i <= n; i++) {
+				le = T[i] + off; dd = int(le / 86400) - ld; if (dd < 0 || dd > 5) continue
+				hr = int((le % 86400) / 3600)
+				v = TA[i]; if (v != "") { if (!(dd in HI) || v > HI[dd]) HI[dd] = v; if (!(dd in LO) || v < LO[dd]) LO[dd] = v }
+				v = X6[i]; if (v != "" && (!(dd in HI) || v > HI[dd])) HI[dd] = v
+				v = N6[i]; if (v != "" && (!(dd in LO) || v < LO[dd])) LO[dd] = v
+				sy = S6[i]; if (sy == "") sy = S1[i]
+				if (sy != "") {
+					w = wmo(sy)
+					if (hr >= 6 && hr <= 18) { if (!(dd in DC) || w > DC[dd]) DC[dd] = w }
+					else if (!(dd in NC) || w > NC[dd]) NC[dd] = w
+				}
+				pv = (S6[i] != "") ? popof(P6[i], A6[i]) : popof(P1[i], A1[i])
+				if (!(dd in PP) || pv > PP[dd]) PP[dd] = pv
+			}
+			dt = ""; dc = ""; dx = ""; dn = ""; dp = ""
+			for (dd = 0; dd <= 5; dd++) {
+				if (!(dd in HI)) continue
+				if (!(dd in DC)) DC[dd] = (dd in NC) ? NC[dd] : -1
+				sp = (dt == "") ? "" : ","
+				dt = dt sp "\"" substr(lstr((ld + dd) * 86400), 1, 10) "\""
+				dc = dc sp DC[dd]; dx = dx sp HI[dd]; dn = dn sp LO[dd]; dp = dp sp PP[dd]
+			}
+			printf "d_t=%s\nd_c=%s\nd_x=%s\nd_n=%s\nd_p=%s\ntmax=%s\ntmin=%s\nMET_OK=1\n", dt, dc, dx, dn, dp, HI[0], LO[0]
+		}')
+	MET_OK=0
+	eval "$res"
+	if [ "$MET_OK" != 1 ]; then
+		log "met: unexpected response: $(cut -c1-300 "$mj" 2>/dev/null)"
+		return 1
+	fi
+	# Trigonometry and exp() in awk calls of their own: should a BusyBox awk lack its math
+	# functions, only these fail. Sunrise / sunset today (NOAA approximation, local HH:MM; else
+	# the last known ones) and the feels-like temperature as Open-Meteo computes it (Steadman).
+	sunrise="" sunset=""
+	sun=$(awk -v doy="$mdoy" -v lat="$mlat" -v lon="$mlon" -v off="$moff" 'BEGIN {
+		pi = 3.14159265; g = 2 * pi / 365 * (doy - 1)
+		eqt = 229.18 * (0.000075 + 0.001868 * cos(g) - 0.032077 * sin(g) - 0.014615 * cos(2 * g) - 0.040849 * sin(2 * g))
+		dec = 0.006918 - 0.399912 * cos(g) + 0.070257 * sin(g) - 0.006758 * cos(2 * g) + 0.000907 * sin(2 * g) - 0.002697 * cos(3 * g) + 0.00148 * sin(3 * g)
+		la = lat * pi / 180
+		x = cos(90.833 * pi / 180) / (cos(la) * cos(dec)) - sin(la) / cos(la) * sin(dec) / cos(dec)
+		if (x > 1) x = 1
+		if (x < -1) x = -1
+		ha = atan2(sqrt(1 - x * x), x) * 180 / pi
+		r = 720 - 4 * (lon + ha) - eqt + off / 60; s = 720 - 4 * (lon - ha) - eqt + off / 60
+		printf "%02d:%02d %02d:%02d %d %d\n", int(r / 60), int(r % 60), int(s / 60), int(s % 60), r, s
+	}' 2>/dev/null)
+	if [ -n "$sun" ]; then
+		set -- $sun
+		sunrise=$1 sunset=$2
+		[ -n "$is_day" ] || { [ "$nowm" -ge "$3" ] && [ "$nowm" -lt "$4" ] && is_day=1 || is_day=0; }
+	else
+		sunrise=$(sed -n 's/^W_SUNRISE=//p' "$WEATHER_ENV" 2>/dev/null)
+		sunset=$(sed -n 's/^W_SUNSET=//p' "$WEATHER_ENV" 2>/dev/null)
+	fi
+	[ -n "$is_day" ] || is_day=$(sed -n 's/^W_IS_DAY=//p' "$WEATHER_ENV" 2>/dev/null)
+	feels=$(awk -v t="$temp" -v h="$hum" -v w="$mws" 'BEGIN {
+		e = h / 100 * 6.105 * exp(17.27 * t / (237.7 + t)); printf "%.1f", t + 0.33 * e - 0.70 * w - 4.00 }' 2>/dev/null)
+	uv="" raw_code=$code sky=""
+	log "met: via $via, symbol=$msym temp=$temp feels=$feels wind=$wind cloud=${cloud}% low=${mlow}% mid=${mmid}% shown_code=$code day=$is_day hum=${hum}% press=$press sun=$sunrise-$sunset"
+	press_trend
+	rain=$(wx_rain "$h_t" "$h_p" "$h_a" "$h_c" "$h_s")
+	days=$(wx_days "$d_t" "$d_c" "$d_x" "$d_n" "$d_p")
+	wx_save met
+	return 0
+}
+
+# --- Network: fallback, Wi-Fi restart, slower retries ------------------------------
+# get_weather: Open-Meteo, else MET Norway. NET_DOWN=1 when both failed (no network at all,
+# as on 2 Nov 04:37-08:59, when every request failed until the app was restarted).
+get_weather() {
+	NET_DOWN=0
+	fetch_weather && return 0
+	fetch_met && return 0
+	NET_DOWN=1
+	return 1
+}
+
+# Wi-Fi state for the log: connection manager state, wireless switch, IP address, gateway.
+wifi_state() {
+	ws_cm=$(lipc-get-prop com.lab126.wifid cmState 2>/dev/null)
+	ws_en=$(lipc-get-prop com.lab126.cmd wirelessEnable 2>/dev/null)
+	ws_ip=$(ifconfig wlan0 2>/dev/null | sed -n 's/.*inet addr:\([0-9.]*\).*/\1/p')
+	ws_gw=$(route -n 2>/dev/null | awk '$1 == "0.0.0.0" { print $2; exit }')
+	echo "cmState=${ws_cm:-?} wireless=${ws_en:-?} ip=${ws_ip:-none} gw=${ws_gw:-none}"
+}
+
+# Switch the Wi-Fi off and on again (WIFI_RESTART=1) and wait up to 60 s for a connection.
+# The framework, which normally reconnects, is stopped while the app runs; restarting the app
+# started it for a moment, which is likely why that fixed the 2 Nov outage. Three ways in turn,
+# one per restart: the connection manager's wireless switch, the Wi-Fi daemon, and restarting
+# the connection manager itself. Each step goes to the log.
+WIFI_N=0
+wifi_restart() {
+	[ "${WIFI_RESTART:-1}" = 1 ] || return 1
+	WIFI_N=$((WIFI_N + 1))
+	wr_how=$(((WIFI_N - 1) % 3 + 1))
+	log "wifi: restart $WIFI_N (way $wr_how), before: $(wifi_state)"
+	touch "$STATE/wifirestart"
+	refresh_status
+	case $wr_how in
+	1)
+		lipc-set-prop com.lab126.cmd wirelessEnable 0 >/dev/null 2>&1
+		sleep 5
+		lipc-set-prop com.lab126.cmd wirelessEnable 1 >/dev/null 2>&1
+		;;
+	2)
+		lipc-set-prop com.lab126.wifid enable 0 >/dev/null 2>&1
+		sleep 5
+		lipc-set-prop com.lab126.wifid enable 1 >/dev/null 2>&1
+		;;
+	*)
+		restart cmd >/dev/null 2>&1 || { stop cmd >/dev/null 2>&1; sleep 2; start cmd >/dev/null 2>&1; }
+		sleep 5
+		lipc-set-prop com.lab126.cmd wirelessEnable 1 >/dev/null 2>&1
+		;;
+	esac
+	wr_t=0 wr_ok=1
+	while [ "$wr_t" -lt 60 ]; do
+		sleep 5
+		wr_t=$((wr_t + 5))
+		if [ "$(lipc-get-prop com.lab126.wifid cmState 2>/dev/null)" = CONNECTED ]; then
+			wr_ok=0
+			sleep 3 # DHCP and DNS
+			break
+		fi
+	done
+	rm -f "$STATE/wifirestart"
+	if [ "$wr_ok" = 0 ]; then
+		log "wifi: connected after ${wr_t}s: $(wifi_state)"
+	else
+		log "wifi: not connected after ${wr_t}s: $(wifi_state)"
+	fi
+	refresh_status
+	return $wr_ok
+}
+
+# Minutes to wait after the Nth failed round with no network: 2, 5, 10, 15, then 30
+# (NET_RETRY_MINUTES). Before, it was tried again every minute.
+net_wait() {
+	set -- $1 ${NET_RETRY_MINUTES:-2 5 10 15 30}
+	nw_n=$1
+	shift
+	while [ "$nw_n" -gt 1 ] && [ $# -gt 1 ]; do
+		shift
+		nw_n=$((nw_n - 1))
+	done
+	echo "$1"
+}
+
+# One fetch round (when $next_fetch is due). On success: warnings and air quality when due,
+# redraw, next round after WEATHER_MINUTES. On failure: up to 3 retries 15 s apart (the Wi-Fi
+# is often not up right after start); then, with no network at all, the Wi-Fi is restarted
+# (at most every 10 minutes) and the next rounds wait longer and longer (net_wait).
+fetch_round() {
+	fr_now=$(date +%s)
+	if get_weather; then
+		if [ "$net_fail" -gt 0 ] || [ "$fail_n" -gt 0 ]; then
+			log "net: back after $((fail_n + net_fail)) failed tries"
+			last_ntp=0 # the clock may have drifted meanwhile
+		fi
+		fail_n=0 net_fail=0
+		last_fetch=$fr_now
+		next_fetch=$((fr_now + $(weather_minutes) * 60 - 30))
+		if [ "$1" = all ] || [ $((fr_now - last_warn)) -ge $((${WARN_MINUTES:-30} * 60 - 30)) ]; then
+			fetch_warnings && last_warn=$(date +%s)
+		fi
+		if [ "$1" = all ] || [ $((fr_now - last_pollen)) -ge $((${POLLEN_MINUTES:-60} * 60 - 30)) ]; then
+			fetch_air && last_pollen=$(date +%s)
+		fi
+		return 0
+	fi
+	if [ "$fail_n" -lt 3 ]; then
+		fail_n=$((fail_n + 1))
+		next_fetch=$((fr_now + 15))
+		log "weather: retry $fail_n in 15 s"
+		return 1
+	fi
+	net_fail=$((net_fail + 1))
+	if [ "$NET_DOWN" = 1 ] && [ $((fr_now - last_wifi)) -ge 600 ]; then
+		last_wifi=$fr_now
+		if wifi_restart && get_weather; then
+			log "net: back after the Wi-Fi restart"
+			fail_n=0 net_fail=0 last_ntp=0
+			last_fetch=$(date +%s)
+			next_fetch=$((last_fetch + $(weather_minutes) * 60 - 30))
+			fetch_warnings && last_warn=$(date +%s)
+			fetch_air && last_pollen=$(date +%s)
+			return 0
+		fi
+	fi
+	fr_wait=$(net_wait "$net_fail")
+	next_fetch=$(($(date +%s) + fr_wait * 60))
+	if [ "$NET_DOWN" = 1 ]; then
+		log "net: no network ($net_fail rounds), next try in $fr_wait min"
+	else
+		log "weather: both sources failed ($net_fail rounds), next try in $fr_wait min"
+	fi
+	return 1
 }
 
 # The Open-Meteo air quality service (CAMS): the UV index now (the weather model, ICON, has
@@ -471,7 +880,7 @@ fetch_warnings() {
 			t = tag("title"); lv = 0
 			if (t ~ /^yellow/) lv = 1; else if (t ~ /^orange/) lv = 2; else if (t ~ /^red/) lv = 3
 			if (lv == 0) next
-			ty = t; sub(/^[a-z]+ /, "", ty); sub(/ warning.*$/, "", ty)
+			ty = t; sub(/^[a-z]+ /, "", ty); sub(/ warning.*$/, "", ty); gsub(/ /, "-", ty)
 			on = ep(tag("cap:onset")); if (on == 0) on = ep(tag("cap:effective"))
 			ex = ep(tag("cap:expires"))
 			if (ex <= now || on - now > 86400) next
@@ -492,13 +901,33 @@ fetch_warnings() {
 					x = kt[i]; kt[i] = kt[j]; kt[j] = x
 				}
 			}
-			shown = (nk > 2) ? 2 : nk
+			# Codes of the same level share one box (2.064): one title, the types listed
+			# together ("wind,rain", shown as "VÂNT, PLOI") in the order they start, and the
+			# period of the oldest code. WARNi_END is the latest end, so the box stays while any
+			# of them lasts. Every code (level, type, period) also goes to WARNE*, for the one
+			# bubble that a tap on a box opens (draw_warn_popup): red first, then orange, yellow.
+			nb = 0
+			for (i = 1; i <= nk; i++) {
+				for (j = 1; j <= nb; j++) if (bl[j] == kl[i]) break
+				if (j > nb) { nb++; bl[nb] = kl[i]; bt[nb] = kt[i]; bf[nb] = fo[keys[i]]; be[nb] = fe[keys[i]]; bz[nb] = fe[keys[i]] }
+				else {
+					bt[j] = bt[j] "," kt[i]
+					if (fe[keys[i]] > bz[j]) bz[j] = fe[keys[i]]
+				}
+			}
+			shown = (nb > 2) ? 2 : nb
 			printf "WARN_N=%d\n", shown
 			for (i = 1; i <= shown; i++)
-				printf "WARN%d_LEVEL=%d\nWARN%d_TYPE=\"%s\"\nWARN%d_FROM=%d\nWARN%d_UNTIL=%d\n", i, kl[i], i, kt[i], i, fo[keys[i]], i, fe[keys[i]]
+				printf "WARN%d_LEVEL=%d\nWARN%d_TYPE=\"%s\"\nWARN%d_FROM=%d\nWARN%d_UNTIL=%d\nWARN%d_END=%d\n", i, bl[i], i, bt[i], i, bf[i], i, be[i], i, bz[i]
+			ne = (nk > 8) ? 8 : nk
+			printf "WARNE_N=%d\n", ne
+			for (i = 1; i <= ne; i++)
+				printf "WARNE%d=\"%d %s %d %d\"\n", i, kl[i], kt[i], fo[keys[i]], fe[keys[i]]
 			printf "WARN_LOG=\"%d entries, %d for this area, %d kinds, areas like: %s\"\n", n, m, nk, sample
 		}')
 	echo "$res" >"$WARN_ENV.tmp" && mv "$WARN_ENV.tmp" "$WARN_ENV"
+	# The bubble drawn ahead (warn_prepare) shows the old codes: the next drawing makes a new one.
+	rm -f "$STATE/warnpop.band"
 	eval "$res"
 	log "warn: via $via, area=$key, $WARN_LOG; shown $WARN_N: ${WARN1_LEVEL:-} ${WARN1_TYPE:-} ${WARN2_LEVEL:-} ${WARN2_TYPE:-}"
 	return 0
@@ -576,6 +1005,7 @@ describe() {
 	63) ICON=rain; DESC="Ploaie" ;;
 	65) ICON=rain; DESC="Ploaie intensă" ;;
 	66 | 67) ICON=rain; DESC="Ploaie înghețată" ;;
+	68 | 69) ICON=snow; DESC="Lapoviță" ;; # only from MET Norway (sleet)
 	71) ICON=snow; DESC="Ninsoare slabă" ;;
 	73) ICON=snow; DESC="Ninsoare" ;;
 	75) ICON=snow; DESC="Ninsoare intensă" ;;
@@ -601,6 +1031,7 @@ describe() {
 		63) DESC="Rain" ;;
 		65) DESC="Heavy rain" ;;
 		66 | 67) DESC="Freezing rain" ;;
+		68 | 69) DESC="Sleet" ;;
 		71) DESC="Light snow" ;;
 		73) DESC="Snow" ;;
 		75) DESC="Heavy snow" ;;
@@ -1011,15 +1442,16 @@ draw_clock() {
 # in the free space above the texts.
 draw_warnings() {
 	WARN_BOT=$WARN_Y HDR_END=718 WARN_SHOWN=0
+	rm -f "$STATE/warnbox"
 	[ "${WARNINGS:-1}" = 1 ] && [ -f "$WARN_ENV" ] || return 0
 	WARN_N=0
 	. "$WARN_ENV"
 	nowe=$(date +%s)
 	wk=1 wy=$WARN_Y wshown=0 WARN_BOT=$WARN_Y
 	while [ "$wk" -le "${WARN_N:-0}" ] && [ "$wshown" -lt 2 ]; do
-		eval "wlv=\$WARN${wk}_LEVEL wty=\$WARN${wk}_TYPE wfr=\$WARN${wk}_FROM wun=\$WARN${wk}_UNTIL"
+		eval "wlv=\$WARN${wk}_LEVEL wty=\$WARN${wk}_TYPE wfr=\$WARN${wk}_FROM wun=\$WARN${wk}_UNTIL wend=\${WARN${wk}_END:-\$WARN${wk}_UNTIL}"
 		wk=$((wk + 1))
-		[ "${wun:-0}" -gt "$nowe" ] || continue
+		[ "${wend:-0}" -gt "$nowe" ] || continue
 		set -- $T_WARN
 		case $wlv in
 		1) wname=$1 ;;
@@ -1056,6 +1488,10 @@ draw_warnings() {
 			fb_rtext "$F_REG" "$wtp" $((wy + 50)) $((WARN_R - 2)) "$wtxt" -O
 			fb_rtext "$F_REG" 30 $((wy + 79)) $((WARN_R - 6)) "$wper" -O -C GRAY5
 		fi
+		# Where a tap opens this box's details (warn number, left, top, width, height): 360
+		# wide from the box's outer edge, clear of the light swipe strip.
+		if [ "$ORIENT" = landscape ]; then wbx=$((WARN_L + 6)); else wbx=$((WARN_R - 360)); fi
+		echo "$((wk - 1)) $wbx $((wy - 4)) 360 114" >>"$STATE/warnbox"
 		wy=$((wy + 116))
 		WARN_BOT=$((wy - 6))
 		wshown=$((wshown + 1))
@@ -1558,7 +1994,9 @@ read_status() {
 	ST_CHG=$(lipc-get-prop com.lab126.powerd isCharging 2>/dev/null)
 	ST_BUSY=0
 	[ -f "$STATE/fetching" ] && ST_BUSY=1
-	STATUS_KEY="$ST_LVL $ST_CHG $ST_FETCHED $ST_OFFLINE $ST_BUSY"
+	[ -f "$STATE/wifirestart" ] && ST_BUSY=2
+	ST_SRC=${W_SOURCE:-om}
+	STATUS_KEY="$ST_LVL $ST_CHG $ST_FETCHED $ST_OFFLINE $ST_BUSY $ST_SRC"
 }
 
 # Battery (black glyph, bold percentage, "Se încarcă" / "Încarcă bateria" in bold) ending at
@@ -1594,12 +2032,16 @@ draw_status() {
 		fi
 	fi
 	font=$F_REG color=GRAY5 upd=""
-	if [ "$ST_BUSY" = 1 ]; then
+	if [ "$ST_BUSY" = 2 ]; then
+		upd=$T_WIFI
+	elif [ "$ST_BUSY" = 1 ]; then
 		upd=$T_UPDATING
 	elif [ -n "$ST_FETCHED" ]; then
 		when=$(date -d "@$ST_FETCHED" '+%H:%M' 2>/dev/null)
 		[ "$CLK12" = 1 ] && when=$(clock_fmt "$when")
 		upd="$T_UPDATED $when"
+		# The fallback forecast says where it came from.
+		[ "$ST_SRC" = met ] && upd="$upd · MET Norway"
 		if [ "$ST_OFFLINE" = 1 ]; then
 			font=$F_BOLD color=BLACK upd="! $T_NODATA $when"
 		fi
@@ -1755,11 +2197,21 @@ finish_draw() {
 		rm -f "$STATE/under.fb"
 		draw_light_popup
 		;;
+	warn)
+		rm -f "$STATE/under.fb" "$STATE/under.band"
+		draw_warn_popup || rm -f "$STATE/menu"
+		;;
 	esac
 	if [ "$flash" = 1 ]; then
 		fbink -q -f -s >/dev/null 2>&1
 	else
 		fbink -q -s >/dev/null 2>&1
+	fi
+	# The warnings bubble, drawn ahead for a quick tap (not while something is open on top).
+	if [ -f "$STATE/picker" ] || [ -f "$STATE/menu" ]; then
+		rm -f "$STATE/warnpop.band"
+	else
+		warn_prepare
 	fi
 	rm -f "$STATE/drawing"
 }
@@ -1826,6 +2278,239 @@ draw_menu() {
 		mrow=$((mrow + 1))
 	done
 	fb_refresh $((MENU_Y - 12)) "$MENU_X" "$MENU_W" $((MENU_H + 24))
+}
+
+# One bubble for every code (a tap on any warning box, 2.064): red first, then orange and
+# yellow; for each level its code band, every type with its own period, and what the code means
+# (ANM's wording); the source and Close at the bottom. It grows downwards to hold them all.
+# Drawn ahead after each full drawing (warn_prepare), so a tap only copies it to the screen.
+warn_meaning() {
+	if [ "$UI_LANG" = en ]; then
+		case $1 in
+		1) echo "Weather usual for the area, but potentially dangerous|for some activities. Take care in exposed places." ;;
+		2) echo "Dangerous weather of high intensity. Be very careful,|avoid needless travel and follow the forecasts." ;;
+		*) echo "Dangerous weather of very high intensity. Take protective|measures and follow the instructions of the authorities." ;;
+		esac
+	else
+		case $1 in
+		1) echo "Fenomene obișnuite pentru zonă, dar potențial periculoase|pentru anumite activități. Atenție în zonele expuse." ;;
+		2) echo "Fenomene periculoase, de intensitate mare. Fiți vigilenți,|evitați deplasările inutile și urmăriți prognozele." ;;
+		*) echo "Fenomene periculoase, de intensitate foarte mare. Luați|măsuri de protecție și urmați indicațiile autorităților." ;;
+		esac
+	fi
+}
+
+# Bubble sizes (canvas px): width, a level's band and gap, a type row, a line of the meaning,
+# the source line and the Close row. ui/bula-sus.png and bula-jos.png are its rounded ends.
+WB_W=700 WB_BAND=56 WB_ROW=44 WB_LINE=33 WB_SRC=38 WB_CLOSE=62
+
+# draw_warn_popup [noref]: draws the bubble and writes its place ("left top width height") to
+# $STATE/warnpop; noref leaves the screen as it is (warn_prepare). 1 when no code is on.
+draw_warn_popup() {
+	wp_ref=$1
+	[ -f "$WARN_ENV" ] || return 1
+	WARNE_N=0
+	. "$WARN_ENV"
+	nowe=$(date +%s)
+	# Codes still on, as "level type from until|" (the list is red first, then by start).
+	wp_codes="" wp_levels="" wi=1
+	while [ "$wi" -le "${WARNE_N:-0}" ]; do
+		eval "set -- \$WARNE$wi"
+		wi=$((wi + 1))
+		[ "${4:-0}" -gt "$nowe" ] || continue
+		wp_codes="$wp_codes$1 $2 $3 $4|"
+		case " $wp_levels " in *" $1 "*) ;; *) wp_levels="$wp_levels $1" ;; esac
+	done
+	[ -n "$wp_codes" ] || return 1
+	# Height: each level's band, its rows and its meaning, a gap between levels.
+	wbh=14
+	for wl in $wp_levels; do
+		wn=0
+		IFS='|'
+		for wc in $wp_codes; do [ "${wc%% *}" = "$wl" ] && wn=$((wn + 1)); done
+		wm=$(warn_meaning "$wl")
+		set -- $wm
+		unset IFS
+		wbh=$((wbh + WB_BAND + wn * WB_ROW + $# * WB_LINE + 18))
+	done
+	wbh=$((wbh + WB_SRC + WB_CLOSE))
+	# Too tall for the screen (three levels in landscape): without the source line.
+	wsrc=1
+	[ "$wbh" -gt $((CH - 8)) ] && wbh=$((wbh - WB_SRC)) wsrc=0
+	# Under the last box, the tip pointing at it; moved up (without a tip) when it would not fit.
+	wnb=$(wc -l <"$STATE/warnbox" 2>/dev/null)
+	wbt=$((WARN_Y + ${wnb:-1} * 116 + 2))
+	wtip=1
+	if [ $((wbt + wbh)) -gt $((CH - 8)) ]; then
+		wbt=$((CH - 8 - wbh)) wtip=0
+		[ "$wbt" -lt 8 ] && wbt=8
+	fi
+	if [ "$ORIENT" = landscape ]; then
+		wbl=$WARN_L wtx=$((WARN_L + 60))
+	else
+		wbl=$((WARN_R - WB_W)) wtx=$((WARN_R - 120))
+	fi
+	echo "$wbl $wbt $WB_W $wbh" >"$STATE/warnpop"
+	fb_image "$DIR/ui/bula-sus.png" "$wbl" "$wbt" "$WB_W" 16
+	fb_rect $((wbt + 16)) "$wbl" "$WB_W" $((wbh - 32)) BLACK
+	fb_rect $((wbt + 16)) $((wbl + 2)) $((WB_W - 4)) $((wbh - 32)) WHITE
+	fb_image "$DIR/ui/bula-jos.png" "$wbl" $((wbt + wbh - 16)) "$WB_W" 16
+	[ "$wtip" = 1 ] && fb_image "$DIR/ui/varf-sus.png" "$wtx" $((wbt - 12)) 24 14
+	wy=$((wbt + 14))
+	set -- $T_WARN
+	wnames="$1 $2 $3"
+	for wl in $wp_levels; do
+		# A gray line between levels.
+		[ "$wy" -gt $((wbt + 14)) ] && fb_rect $((wy - 10)) $((wbl + 16)) $((WB_W - 32)) 2 GRAY9
+		set -- $wnames
+		case $wl in 1) wname=$1 ;; 2) wname=$2 ;; *) wname=$3 ;; esac
+		if [ "$UI_LANG" = en ]; then wlab="$wname $T_WARNCODE"; else wlab="$T_WARNCODE $wname"; fi
+		wbw=$(($(tw_c "$F_BOLD" 33 "$wlab") + 26))
+		wfill=""
+		[ "$wl" -ge 2 ] && wfill=GRAYA
+		fb_pill "$wy" $((wbl + 18)) "$wbw" 44 $wfill
+		fb_ltext "$F_BOLD" 33 $((wy + 5)) $((wbl + 31)) "$wlab" -O
+		[ "$wl" -ge 3 ] && fb_image "$DIR/ui/atentie.png" $((wbl + 30 + wbw)) $((wy + 1)) 46 42
+		wy=$((wy + WB_BAND))
+		# One row a type: the type in bold capitals, its own period at the right.
+		IFS='|'
+		for wc in $wp_codes; do
+			unset IFS
+			set -- $wc
+			[ "$1" = "$wl" ] || continue
+			wtx2=$(warn_type_up "$2")
+			wper="$(warn_day "$3") – $(warn_day "$4")"
+			wtp=$(fit_px "$F_BOLD" 31 300 "$wtx2")
+			fb_ltext "$F_BOLD" "$wtp" $((wy + (31 - wtp) / 2)) $((wbl + 24)) "$wtx2" -O
+			fb_rtext "$F_REG" 29 $((wy + 1)) $((wbl + WB_W - 24)) "$wper" -O
+			wy=$((wy + WB_ROW))
+		done
+		unset IFS
+		# What the code means.
+		wm=$(warn_meaning "$wl")
+		IFS='|'
+		set -- $wm
+		unset IFS
+		for wml in "$@"; do
+			wlp=$(fit_px "$F_REG" 27 $((WB_W - 48)) "$wml")
+			fb_ltext "$F_REG" "$wlp" "$wy" $((wbl + 24)) "$wml" -O
+			wy=$((wy + WB_LINE))
+		done
+		wy=$((wy + 18))
+	done
+	[ "$wsrc" = 1 ] && fb_ltext "$F_REG" 24 $((wy - 4)) $((wbl + 24)) "$T_WARNSRC" -O -C GRAY5
+	fb_rect $((wbt + wbh - WB_CLOSE)) $((wbl + 16)) $((WB_W - 32)) 2 GRAY9
+	fb_ctext "$F_BOLD" 29 $((wbt + wbh - WB_CLOSE + 15)) $((wbl + WB_W / 2)) "$T_CLOSE" -O
+	[ "$wp_ref" = noref ] || fb_refresh $((wbt - 12)) "$wbl" "$WB_W" $((wbh + 12))
+	return 0
+}
+
+# Time since boot in hundredths of a second, and a difference as "1.23" (for the log).
+uptime_cs() {
+	read ut_v ut_x </proc/uptime 2>/dev/null
+	ut_v=${ut_v:-0.00}
+	echo "${ut_v%.*}${ut_v#*.}" | sed 's/^0*\([0-9]\)/\1/'
+}
+secs_since() {
+	ss_d=$(($(uptime_cs) - $1))
+	echo "$((ss_d / 100)).$((ss_d % 100 / 10))$((ss_d % 10))"
+}
+
+# fb_rows TOP HEIGHT (canvas): the whole framebuffer rows under that band, as FR_BS (bytes a
+# row), FR_TOP and FR_N, for dd. 1 when the memory layout is not the turned screen's (then the
+# whole screen is saved and redrawn as before), or with WARN_FAST=0.
+FBSYS=${FBSYS:-/sys/class/graphics/fb0}
+fb_rows() {
+	[ "${WARN_FAST:-1}" = 1 ] || return 1
+	FR_BS=$(cat "$FBSYS/stride" 2>/dev/null)
+	fr_bpp=$(cat "$FBSYS/bits_per_pixel" 2>/dev/null)
+	fr_pan=$(cat "$FBSYS/pan" 2>/dev/null)
+	[ -n "$FR_BS" ] && [ -n "$fr_bpp" ] && [ "$fr_bpp" -ge 8 ] || return 1
+	case $fr_pan in "" | *,0) ;; *) return 1 ;; esac
+	[ "$FR_BS" -ge $((SCR_W * fr_bpp / 8)) ] || return 1
+	fr_t=$1 fr_h=$2
+	[ "$fr_t" -lt 0 ] && fr_h=$((fr_h + fr_t)) fr_t=0
+	FR_TOP=$(px_y "$fr_t")
+	FR_N=$(px_len "$fr_h")
+	[ $((FR_TOP + FR_N)) -gt "$SCR_H" ] && FR_N=$((SCR_H - FR_TOP))
+	[ "$FR_N" -gt 0 ]
+}
+
+# After a full drawing (finish_draw): the bubble is drawn into the framebuffer, its rows are
+# kept in $STATE/warnpop.band (where: warnpop.rows), and the screen is put back, all before
+# anything shows. A tap on a box then only copies those rows (warn_open).
+warn_prepare() {
+	rm -f "$STATE/warnpop.band" "$STATE/warnpop.rows"
+	[ "${WARNINGS:-1}" = 1 ] && [ -s "$STATE/warnbox" ] || return 0
+	wpp_t=$(uptime_cs)
+	cat "$FBDEV" >"$STATE/screen.fb" 2>/dev/null || { rm -f "$STATE/screen.fb"; return 0; }
+	wpp_ok=""
+	if draw_warn_popup noref; then
+		set -- $(cat "$STATE/warnpop")
+		if fb_rows $(($2 - 12)) $(($4 + 12)) &&
+			dd if="$FBDEV" of="$STATE/warnpop.band" bs="$FR_BS" skip="$FR_TOP" count="$FR_N" 2>/dev/null; then
+			echo "$FR_BS $FR_TOP $FR_N" >"$STATE/warnpop.rows"
+			wpp_ok=1
+		fi
+	fi
+	cat "$STATE/screen.fb" >"$FBDEV" 2>/dev/null
+	rm -f "$STATE/screen.fb"
+	if [ -n "$wpp_ok" ]; then wpp_note=", rows $FR_TOP+$FR_N"
+	else
+		rm -f "$STATE/warnpop.band"
+		wpp_note=" (not kept: stride=$FR_BS bpp=$fr_bpp pan=$fr_pan view=${SCR_W}x$SCR_H)"
+	fi
+	log "warn: bubble drawn ahead in $(secs_since "$wpp_t") s$wpp_note"
+}
+
+# A tap on a warning box: the rows under the bubble are saved (under.band) and the bubble drawn
+# ahead is copied over them; without one, the whole screen is saved and the bubble drawn.
+warn_open() {
+	wo_t=$(uptime_cs)
+	echo "warn $(date +%s)$$" >"$STATE/menu"
+	date +%s >"$STATE/warnopen"
+	rm -f "$STATE/under.band"
+	wo_how=""
+	if [ -s "$STATE/warnpop.band" ] && [ ! -f "$STATE/drawing" ]; then
+		set -- $(cat "$STATE/warnpop.rows" 2>/dev/null)
+		if [ $# = 3 ] && dd if="$FBDEV" of="$STATE/under.band" bs="$1" skip="$2" count="$3" 2>/dev/null &&
+			dd if="$STATE/warnpop.band" of="$FBDEV" bs="$1" seek="$2" count="$3" conv=notrunc 2>/dev/null; then
+			set -- $(cat "$STATE/warnpop")
+			fb_refresh $(($2 - 12)) "$1" "$3" $(($4 + 12))
+			wo_how="drawn ahead"
+		else
+			rm -f "$STATE/under.band"
+		fi
+	fi
+	if [ -z "$wo_how" ]; then
+		fb_save
+		draw_warn_popup || { rm -f "$STATE/menu"; log "popup: warn, no code on"; return 0; }
+		wo_how="drawn now"
+	fi
+	log "popup: warn open ($wo_how) in $(secs_since "$wo_t") s"
+	popup_timer "${WARN_SECONDS:-5}"
+}
+
+# Closing the bubble: only its rows go back (under.band), with a flash on that part alone.
+warn_close() {
+	[ -s "$STATE/under.band" ] && [ ! -f "$STATE/drawing" ] || return 1
+	wc_t=$(uptime_cs)
+	set -- $(cat "$STATE/warnpop.rows" 2>/dev/null)
+	[ $# = 3 ] && dd if="$STATE/under.band" of="$FBDEV" bs="$1" seek="$2" count="$3" conv=notrunc 2>/dev/null || return 1
+	rm -f "$STATE/under.band" "$STATE/under.fb"
+	set -- $(cat "$STATE/warnpop")
+	fbink -q -f -s top="$(px_y $(($2 - 12)))",left="$(px_x "$1")",width="$(px_len "$3")",height="$(px_len $(($4 + 12)))" >/dev/null 2>&1
+	log "popup: warn closed in $(secs_since "$wc_t") s"
+	# The clock may have changed under it (as fb_restore).
+	touch "$STATE/clockdraw"
+	kill -USR1 "$main_pid" 2>/dev/null
+	return 0
+}
+
+# The warning box under a tap (canvas X Y), or nothing.
+warn_box_at() {
+	[ -f "$STATE/warnbox" ] || return 0
+	awk -v x="$1" -v y="$2" '$2 <= x && x < $2 + $4 && $3 <= y && y < $3 + $5 { print $1; exit }' "$STATE/warnbox"
 }
 
 light_level_now() {
@@ -1932,7 +2617,11 @@ fb_restore() {
 open_popup() {
 	op_tok="$1 $(date +%s)$$"
 	echo "$op_tok" >"$STATE/menu"
-	if [ "$1" = main ]; then draw_menu; else draw_light_popup; fi
+	case $1 in
+	main) draw_menu ;;
+	warn) draw_warn_popup ;;
+	*) draw_light_popup ;;
+	esac
 	log "popup: $1 open"
 	popup_timer "$2"
 }
@@ -1948,7 +2637,10 @@ popup_timer() {
 # The pop-ups cover part of the screen, so closing one redraws it without the pause of a layout
 # change, with a flash: without one, e-ink ghosts of the pop-up stayed on the Kindle.
 close_popup() {
+	cp_kind=$(cut -d' ' -f1 "$STATE/menu" 2>/dev/null)
 	rm -f "$STATE/menu"
+	[ "$cp_kind" = warn ] && warn_close && return 0
+	rm -f "$STATE/under.band"
 	fb_restore && return 0
 	touch "$STATE/redraw"
 	kill -USR1 "$main_pid" 2>/dev/null
@@ -2541,6 +3233,22 @@ touch_watch() {
 				else
 					tap_outside "$B_LIGHT"
 				fi
+			elif [ "$popup" = warn ]; then
+				set -- $(cat "$STATE/warnpop" 2>/dev/null) 0 0 0 0
+				if [ "$cx" -ge "$1" ] && [ "$cx" -lt $(($1 + $3)) ] && [ "$cy" -ge "$2" ] && [ "$cy" -lt $(($2 + $4)) ]; then
+					# Close row: closes; the rest of the bubble: nothing.
+					if [ "$cy" -ge $(($2 + $4 - WB_CLOSE)) ]; then
+						log "popup: warn, Close"
+						close_popup
+					fi
+				elif [ $(($(date +%s) - $(cat "$STATE/warnopen" 2>/dev/null || echo 0))) -lt "${WARN_KEEP_SECONDS:-5}" ]; then
+					# Not in the first seconds: the bubble is read first (2.064).
+					log "popup: warn, tap outside in the first ${WARN_KEEP_SECONDS:-5} s, kept"
+				else
+					tap_outside "$B_MENU"
+				fi
+			elif [ -n "$(warn_box_at "$cx" "$cy")" ]; then
+				warn_open
 			elif on_btn "$B_MENU"; then
 				fb_save
 				press_btn menu "$B_MENU"
@@ -2659,7 +3367,7 @@ run() {
 	trap ':' USR1
 
 	NATIVE_ROTA=$(cat /sys/class/graphics/fb0/rotate 2>/dev/null)
-	rm -f "$STATE/redraw" "$STATE/softdraw" "$STATE/fetchnow" "$STATE/layoutreq" "$STATE/lightidx" "$STATE/picker" "$STATE/refetch" "$STATE/menu" "$STATE/fetching" "$STATE/drawing" "$STATE/under.fb" "$STATE/clockdraw" "$STATE/menuorder"
+	rm -f "$STATE/redraw" "$STATE/softdraw" "$STATE/fetchnow" "$STATE/layoutreq" "$STATE/lightidx" "$STATE/picker" "$STATE/refetch" "$STATE/menu" "$STATE/fetching" "$STATE/drawing" "$STATE/under.fb" "$STATE/clockdraw" "$STATE/menuorder" "$STATE/wifirestart"
 	load_city
 	recent_init
 	echo "$NATIVE_ROTA" >"$STATE/rota"
@@ -2698,8 +3406,10 @@ run() {
 	last_warn=0
 	last_pollen=0
 	last_ntp=0
+	last_wifi=0
 	fail_n=0
-	retry_at=""
+	net_fail=0
+	next_fetch=0
 	LAST_AUTO=""
 	first=1
 	last_day=""
@@ -2723,35 +3433,23 @@ run() {
 		else
 			draw_partial
 		fi
+		# A new day: the oldest day leaves the log (see trim_log).
+		[ -n "$last_day" ] && [ "$today" != "$last_day" ] && trim_log
 		last_day=$today
 		first=0
 
-		if [ $((now - last_fetch)) -ge $(($(weather_minutes) * 60 - 30)) ]; then
-			if ! fetch_weather; then
-				# Often the Wi-Fi is not up yet right after start: try again in 15 s
-				# (up to 3 times in a row), not only at the next minute.
-				if [ "${fail_n:-0}" -lt 3 ]; then
-					fail_n=$((${fail_n:-0} + 1))
-					retry_at=$((now + 15))
-				fi
-			else
-				fail_n=0 retry_at=""
-				last_fetch=$now
-				if [ $((now - last_warn)) -ge $((${WARN_MINUTES:-30} * 60 - 30)) ]; then
-					fetch_warnings && last_warn=$now
-				fi
-				if [ $((now - last_pollen)) -ge $((${POLLEN_MINUTES:-60} * 60 - 30)) ]; then
-					fetch_air && last_pollen=$now
-				fi
-				[ -f "$STATE/picker" ] || [ -f "$STATE/menu" ] || draw 0
-			fi
+		# The weather is due (or a retry, see fetch_round). With no network the rounds are
+		# spaced out, so nothing is tried (or logged) every minute any more.
+		if [ "$now" -ge "$next_fetch" ]; then
+			fetch_round && { [ -f "$STATE/picker" ] || [ -f "$STATE/menu" ] || draw 0; }
 		fi
 
 		battery_light
 		[ -f "$STATE/picker" ] || auto_light
 
-		if [ $((now - last_ntp)) -ge 3600 ]; then
+		if [ $((now - last_ntp)) -ge 3600 ] && [ "$net_fail" = 0 ]; then
 			if ntpdate "$NTP_SERVER" >/dev/null 2>&1; then
+				log "ntp: synced with $NTP_SERVER"
 				last_ntp=$now
 			else
 				log "ntp: sync with $NTP_SERVER failed"
@@ -2784,9 +3482,8 @@ run() {
 					rm -f "$STATE/refetch" "$WEATHER_ENV" "$WARN_ENV" "$POLLEN_ENV"
 					load_city
 					fbink -q -c -m -M -t regular="$F_MED",px=36 "$T_LOADING" >/dev/null 2>&1
-					if fetch_weather; then last_fetch=$(date +%s); else last_fetch=0; fi
-					fetch_warnings && last_warn=$(date +%s)
-					fetch_air && last_pollen=$(date +%s)
+					fail_n=0 net_fail=0
+					fetch_round all
 				fi
 				sleep 1
 				layout_init
@@ -2797,23 +3494,17 @@ run() {
 				# Close the menu and say "se actualizează…" where the update time goes.
 				touch "$STATE/fetching"
 				[ -f "$STATE/picker" ] || draw 1
-				if fetch_weather; then last_fetch=$(date +%s); fi
-				fetch_warnings && last_warn=$(date +%s)
-				fetch_air && last_pollen=$(date +%s)
+				# A manual refresh starts the retries over (a Wi-Fi restart included, if
+				# the last one was over 2 minutes ago).
+				fail_n=3 net_fail=0
+				[ $(($(date +%s) - last_wifi)) -ge 120 ] && last_wifi=0
+				fetch_round all
 				rm -f "$STATE/fetching"
 				[ -f "$STATE/picker" ] || draw 0
-			elif [ -n "$retry_at" ] && [ "$(date +%s)" -ge "$retry_at" ]; then
-				retry_at=""
-				log "weather: retry $fail_n"
-				if fetch_weather; then
-					fail_n=0
-					last_fetch=$(date +%s)
-					fetch_warnings && last_warn=$(date +%s)
-					fetch_air && last_pollen=$(date +%s)
+			elif [ "$(date +%s)" -ge "$next_fetch" ]; then
+				# A retry due within this minute (15 s apart).
+				if fetch_round all; then
 					[ -f "$STATE/picker" ] || [ -f "$STATE/menu" ] || draw 1
-				elif [ "$fail_n" -lt 3 ]; then
-					fail_n=$((fail_n + 1))
-					retry_at=$(($(date +%s) + 15))
 				fi
 			elif [ -f "$STATE/clockdraw" ]; then
 				# A pop-up closed and the screen under it came back: the clock may be old.
@@ -2894,10 +3585,8 @@ start)
 	fi
 	mkdir -p "$STATE"
 	migrate_old
-	# Keep the log short: only the last 300 lines survive a restart.
-	if [ -f "$LOG" ] && [ "$(wc -l <"$LOG")" -gt 300 ]; then
-		tail -n 300 "$LOG" >"$LOG.tmp" && mv "$LOG.tmp" "$LOG"
-	fi
+	# The log keeps 5 days (see trim_log).
+	trim_log
 	setsid "$0" run "$layout" "$(orient_arg "$3")" >>"$LOG" 2>&1 </dev/null &
 	;;
 stop)
@@ -2923,6 +3612,16 @@ run)
 fetch)
 	fetch_weather && cat "$WEATHER_ENV"
 	;;
+fetchmet)
+	# The fallback forecast (MET Norway) once, for testing.
+	fetch_met && cat "$WEATHER_ENV"
+	;;
+fetchwarn)
+	# The warnings once, for testing.
+	mkdir -p "$STATE"
+	load_city
+	fetch_warnings && cat "$WARN_ENV"
+	;;
 preview)
 	# Draw one screen from the saved data and exit (for testing): preview LAYOUT ORIENT [menu|light|pick|pick2|pick:COUNTY]
 	LAYOUT=$(layout_arg "$2") || exit 2
@@ -2935,6 +3634,14 @@ preview)
 	case $4 in
 	menu) draw_menu ;;
 	light) draw_light_popup ;;
+	warn | warn2)
+		draw_warn_popup
+		;;
+	warnopen)
+		# As a tap on a box: the bubble drawn ahead is copied to the screen; it closes by
+		# itself after WARN_SECONDS (for testing the quick way).
+		warn_open
+		;;
 	pick | pick:* | pick2)
 		# pick = counties (pick2: second tab), pick:COUNTY = that county's towns.
 		case $4 in

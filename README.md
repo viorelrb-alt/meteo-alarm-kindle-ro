@@ -2,7 +2,7 @@
 
 Turn an old **Kindle Paperwhite 1** into a **weather clock with official weather warnings**. It runs on the Kindle itself. No server, no extra hardware, no API key.
 
-**Latest version: v2.062** · [Download the zip](download/MeteoAlarmKindle-v2.062.zip?raw=1) · [Changelog](docs/CHANGELOG.md) · [Install](docs/INSTALL.md) · [Română](#în-limba-română)
+**Latest version: v2.064** · [Download the zip](download/MeteoAlarmKindle-v2.064.zip?raw=1) · [Changelog](docs/CHANGELOG.md) · [Install](docs/INSTALL.md) · [Română](#în-limba-română)
 
 <p>
   <img src="docs/images/kindle-v206-landscape.jpg" width="58%" alt="Meteo Alarm Kindle on a Kindle Paperwhite 1, landscape, rain view">
@@ -22,7 +22,8 @@ Turn an old **Kindle Paperwhite 1** into a **weather clock with official weather
 - **Weather now and ahead** from [Open-Meteo](https://open-meteo.com) (DWD ICON model): big temperature, icon, description, feels like, high/low, wind.
 - **Rain and snow chart** for the next 12 hours, with a "now" marker.
 - **Two views**: simple, or a 5-day list. **Portrait or landscape**, and a 180° flip for the cable.
-- **MeteoAlarm warnings** (ANM, Romania) for your county: yellow, orange and red codes, up to two at once, shown as gray shades on e-ink.
+- **MeteoAlarm warnings** (ANM, Romania) for your county: yellow, orange and red codes, shown as gray shades on e-ink. Codes of the same color share one box ("VÂNT, PLOI"). A tap on a box opens one bubble with every code, red first, each type with its own period and what the code means. It shows at once and closes by itself after 5 seconds.
+- **Works through outages**: if Open-Meteo does not answer, the forecast comes from MET Norway. Without network the app restarts the Wi-Fi and retries less often. A 5-day log keeps unsolved errors in a separate file.
 - **Sun, UV index and pollen** boxes in landscape. The UV index comes from the Open-Meteo air quality service and shows in the daytime under a clear or partly cloudy sky; otherwise the box shows humidity. In the simple view the boxes take turns every 15 minutes with **Moon (rise/set), Pressure and Air quality (European AQI)**.
 - **315 towns** in all 41 counties and Bucharest. The city shows its county code ("Călărași, CL"). The **favourites are the last 3 cities you chose**. Add your own in `cities.txt`.
 - **One ☰ menu**: orientation, view, rotate, refresh, °C/°F, 12h/24h, Romanian/English. The last used choice moves to the top.
@@ -44,6 +45,10 @@ Turn an old **Kindle Paperwhite 1** into a **weather clock with official weather
 |---|---|
 | ![](docs/images/screens/landscape-sun-uv-pollen.png) | ![](docs/images/screens/landscape-moon-pressure-aqi.png) |
 
+| Portrait, tap on a warning: one bubble for all codes | Landscape, warning bubble |
+|---|---|
+| ![](docs/images/screens/portrait-warning-bubble.png) | ![](docs/images/screens/landscape-warning-bubble.png) |
+
 *These screens are PC previews drawn by the same script.*
 
 <p>
@@ -55,9 +60,9 @@ Turn an old **Kindle Paperwhite 1** into a **weather clock with official weather
 
 ## Install
 
-Short version: jailbreak the Kindle, install KUAL, copy the `extensions` folder from the [v2.062 zip](download/MeteoAlarmKindle-v2.062.zip?raw=1) to the Kindle root, then open **KUAL > Meteo Alarm Kindle**. Full steps: [docs/INSTALL.md](docs/INSTALL.md).
+Short version: jailbreak the Kindle, install KUAL, copy the `extensions` folder from the [v2.064 zip](download/MeteoAlarmKindle-v2.064.zip?raw=1) to the Kindle root, then open **KUAL > Meteo Alarm Kindle**. Full steps: [docs/INSTALL.md](docs/INSTALL.md).
 
-Tested on a **Kindle Paperwhite 1, firmware 5.6.1.1**. Each 2.0x version was tested on the Kindle. 2.062 is new and was checked with PC previews.
+Tested on a **Kindle Paperwhite 1, firmware 5.6.1.1**. Each 2.0x version was tested on the Kindle. 2.064 is new and was checked in a PC simulator.
 
 ## Lock screen add-on
 
@@ -89,14 +94,15 @@ Design, ideas and testing on the Kindle: the project owner (Romania). Code: Clau
 
 Ce face:
 - Vremea acum și pe 5 zile (Open-Meteo), cu graficul de ploaie pe 12 ore.
-- Avertizările MeteoAlarm (ANM) pentru județul tău: cod galben, portocaliu și roșu.
+- Avertizările MeteoAlarm (ANM) pentru județul tău: cod galben, portocaliu și roșu. Codurile de aceeași culoare stau într-o singură casetă. Atingerea unei casete deschide o bulă cu toate codurile, roșu sus, fiecare fenomen cu perioada lui. Bula apare imediat și se închide singură după 5 secunde.
+- Dacă Open-Meteo nu răspunde, prognoza vine de la MET Norway. Fără rețea, aplicația repornește Wi-Fi-ul și reîncearcă mai rar.
 - Portret sau peisaj, vedere simplă sau listă pe 5 zile.
 - 315 localități din toate cele 41 de județe și București. Favoritele sunt ultimele 3 localități alese.
 - Meniul ☰: orientare, vedere, rotire, actualizare, °C/°F, 12h/24h, română/engleză.
 - În peisaj: Soare / UV / Polen. UV-ul vine de la serviciul de calitate a aerului și apare ziua, la Senin, Predominant senin sau Parțial noros; altfel apare Umiditatea. În vederea simplă, casetele alternează la 15 minute cu Lună / Presiune / ICA (indicele european de calitate a aerului).
 - Lumina se reglează glisând pe marginea stângă, ca pe Kobo. La 21% baterie, lumina clipește de 4 ori, se stinge, iar aprinderea automată stă pe pauză până la 50%.
 
-Instalare: faci jailbreak, instalezi KUAL, copiezi folderul `extensions` din [arhiva v2.062](download/MeteoAlarmKindle-v2.062.zip?raw=1) în rădăcina Kindle-ului și pornești din KUAL meniul „Meteo Alarm Kindle”. Dacă ai avut o versiune veche, șterge folderul `extensions/rekindle`. Detalii în `extensions/meteoalarmkindle/CITESTE.txt`.
+Instalare: faci jailbreak, instalezi KUAL, copiezi folderul `extensions` din [arhiva v2.064](download/MeteoAlarmKindle-v2.064.zip?raw=1) în rădăcina Kindle-ului și pornești din KUAL meniul „Meteo Alarm Kindle”. Dacă ai avut o versiune veche, șterge folderul `extensions/rekindle`. Detalii în `extensions/meteoalarmkindle/CITESTE.txt`.
 
 Proiectul a fost creat de cineva din România, ca să refolosească un Kindle vechi uitat într-un sertar. A pornit de la proiectul open-source **rekindle** (Chaozhuang22). Designul, ideile și testele pe Kindle îi aparțin autorului. Codul a fost scris de Claude, asistentul AI al companiei Anthropic.
 

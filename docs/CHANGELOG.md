@@ -1,16 +1,77 @@
-# Meteo Alarm Kindle: changelog (latest: v2.062)
+# Meteo Alarm Kindle: changelog (latest: v2.064)
 
 Weather clock with MeteoAlarm warnings for the Kindle Paperwhite 1: a KUAL extension (shell
 script + FBInk). It runs through KUAL (Kindle Unified Application Launcher) and grew out of
 rekindle, an earlier clock and weather script.
-Weather, UV index, air quality and pollen from Open-Meteo, warnings from MeteoAlarm (ANM, Romania).
+Weather, UV index, air quality and pollen from Open-Meteo (MET Norway as the fallback forecast), warnings from MeteoAlarm (ANM, Romania).
 
 ## Version
 
-2.062: UV index from the air quality service (humidity without it), moon / pressure / air quality boxes, low-battery light blink and pause. 2.061: portrait no-codes layout side by side, ☰ menu order, fixes from the 2.06 log. 2.06: menus close at once, Kobo-style light bar, battery text fix, version in the log. 2.055: larger box titles, separate boxes, capitals for the info lines, icon fixes. 2.054: no-codes layout, "now" marker, light panel fixes. 2.053: faster city picker, pressed buttons, larger light panel. 2.052: renamed to Meteo Alarm Kindle. 2.051: small design fixes. 2.05: layout fixes after the second Kindle test. 2.04: Back / Close / Next row in the city picker. 2.03: the city picker is a speech bubble. 2.02: fixes from the first test on the Kindle. 2.01 was the first release of the new interface (2.xx).
+2.064: codes of the same color in one box, one details bubble for all codes that shows at once and closes by itself after 5 s. 2.063: MET Norway fallback forecast, automatic Wi-Fi restart and slower retries without network, warnings of the same color and period in one box with a details bubble, 5-day log with a separate file of unsolved errors. 2.062: UV index from the air quality service (humidity without it), moon / pressure / air quality boxes, low-battery light blink and pause. 2.061: portrait no-codes layout side by side, ☰ menu order, fixes from the 2.06 log. 2.06: menus close at once, Kobo-style light bar, battery text fix, version in the log. 2.055: larger box titles, separate boxes, capitals for the info lines, icon fixes. 2.054: no-codes layout, "now" marker, light panel fixes. 2.053: faster city picker, pressed buttons, larger light panel. 2.052: renamed to Meteo Alarm Kindle. 2.051: small design fixes. 2.05: layout fixes after the second Kindle test. 2.04: Back / Close / Next row in the city picker. 2.03: the city picker is a speech bubble. 2.02: fixes from the first test on the Kindle. 2.01 was the first release of the new interface (2.xx).
 The 1.xx series is the old interface (last: 1.35).
 
-## What is new in 2.062
+## What is new in 2.064
+
+After the Kindle log of 2 Nov (two yellow codes with different periods stayed in two boxes;
+the bubble took about 2 s to show and the screen came back slowly after it):
+
+- Codes of the same color share one box, whatever their periods: one title ("COD GALBEN"),
+  the types separated by commas ("VÂNT, PLOI") in the order they start, and the period of the
+  oldest code. The box stays while any of them lasts (WARNi_END in warn.env).
+- One bubble for all codes, whichever box is tapped: red at the top, then orange and yellow.
+  For each level: its code band, every type with its own period, and what the code means
+  (ANM's wording). Larger text (700 px wide), and it grows downwards to hold everything; when
+  it does not fit under the boxes it moves up. Its rounded ends are ui/bula-sus.png and
+  ui/bula-jos.png (tools/make_ui.py); ui/cod-bula-1..4.png are gone.
+- It closes by itself after 5 s (WARN_SECONDS=5) or from "Închide". A tap outside it in the
+  first 5 s is ignored (WARN_KEEP_SECONDS=5), so it is not closed by mistake.
+- Quick: after each full drawing the bubble is drawn into the framebuffer, its rows are kept
+  (warnpop.band) and the screen is put back before anything shows. A tap only copies those rows
+  to the screen and refreshes that part; closing copies back the rows that were under it and
+  flashes only that part. The framebuffer layout comes from /sys/class/graphics/fb0 (stride,
+  bits_per_pixel, pan); if it is not the turned screen's, the bubble is drawn at the tap and
+  the whole screen restored, as before (also with WARN_FAST=0).
+- Log: `warn: bubble drawn ahead in N s`, `popup: warn open (drawn ahead|drawn now) in N s`,
+  `popup: warn closed in N s`, `popup: warn, tap outside in the first 5 s, kept`.
+  `meteoalarmkindle.sh fetchwarn` fetches the warnings once (for testing).
+- Tested in a PC simulator (raw framebuffer file), not on the Kindle yet.
+
+## What was new in 2.063
+
+After the log of 2 Nov (no network from 04:37 to 08:59: every request failed each minute
+until the app was restarted):
+
+- No network: after 3 retries 15 s apart, the Wi-Fi is switched off and on by the app
+  (WIFI_RESTART=1, at most every 10 minutes), in three ways in turn: the connection manager's
+  wireless switch (`lipc-set-prop com.lab126.cmd wirelessEnable 0/1`), the Wi-Fi daemon
+  (`com.lab126.wifid enable 0/1`) and restarting the connection manager (`restart cmd`). It
+  waits up to 60 s for `cmState=CONNECTED`. The status line says "repornesc Wi-Fi…" meanwhile.
+  The framework, which normally reconnects, is stopped while the app runs; restarting the app
+  started it for a moment, which is likely why that fixed the outage.
+- Retries without network come after 2, 5, 10, 15, then every 30 minutes
+  (NET_RETRY_MINUTES), not every minute; NTP waits until the network is back, then syncs.
+  "Actualizează vremea" in the ☰ menu tries again at once (with a Wi-Fi restart if needed).
+- Fallback forecast: when Open-Meteo does not answer but the network works, the forecast comes
+  from MET Norway (api.met.no locationforecast 2.0 "complete", free, no key, HTTPS without
+  certificate checks, then HTTP; User-Agent `MeteoAlarmKindle/2.063
+  github.com/viorelrb-alt/meteo-alarm-kindle-ro`, MET_UA). Its symbols are mapped to the WMO
+  codes (sleet = "Lapoviță"), sunrise and sunset are computed, feels-like as Open-Meteo
+  (Steadman). The status line reads "actualizat HH:MM · MET Norway". MET_FALLBACK=0 turns it
+  off. `meteoalarmkindle.sh fetchmet` tries it once.
+- MeteoAlarm: warnings of the same color and the same period share one box ("VÂNT, PLOI").
+  A tap on a warning box opens a bubble under it: the code band, each type with its period,
+  what the code means (ANM's wording, 3 lines) and the source; "Închide" at the bottom, a tap
+  outside or WARN_SECONDS (30) close it. Bubble frames: ui/cod-bula-1..4.png (tools/make_ui.py).
+- Log: meteoalarmkindle.log keeps 5 days (LOG_DAYS). Each day the oldest day is cut; its
+  error lines go to meteoalarmkindle-erori.log and stay there until the same kind (weather,
+  warnings, air, NTP) works again. Before, only 300 lines survived a restart. New lines:
+  `met:`, `wifi:` (state before / after: cmState, wireless, IP, gateway), `net:`,
+  `weather: retry N in 15 s`, `ntp: synced`, `popup: warn …`.
+- Tested in a PC simulator (BusyBox ash, fake FBInk, curl and lipc stubs), not on the Kindle.
+  To check on the Kindle: whether `lipc` restarts the Wi-Fi with the framework stopped, and
+  whether api.met.no answers the Kindle's curl 7.33 (log `met: via https|http`).
+
+## What was new in 2.062
 
 - Why the UV box showed "–": the weather model (`MODEL=icon_seamless`, DWD ICON) has no UV
   index, so Open-Meteo returned `uv_index_max: null`. The UV index now comes from the

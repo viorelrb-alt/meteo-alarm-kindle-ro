@@ -1,4 +1,4 @@
-METEO ALARM KINDLE: ceas, vreme și avertizări pentru Kindle Paperwhite 1 (v2.062)
+METEO ALARM KINDLE: ceas, vreme și avertizări pentru Kindle Paperwhite 1 (v2.064)
 
 Instalare: copiază folderul "extensions" în rădăcina Kindle-ului (Replace).
 Pornire: KUAL > Meteo Alarm Kindle > alege varianta.
@@ -40,7 +40,14 @@ Interfața nouă (2.xx):
   Orașul apare cu codul județului: „Călărași, CL”.
 
 Ecranul:
-- Avertizări MeteoAlarm (ANM): până la două coduri deodată, fiecare cu tipul și perioada.
+- Avertizări MeteoAlarm (ANM): până la două casete deodată, fiecare cu tipul și perioada.
+  Codurile de aceeași culoare stau într-o singură casetă, cu un singur titlu: fenomenele sunt
+  despărțite prin virgulă („VÂNT, PLOI”), iar perioada afișată e a celui mai vechi cod.
+  Atinge oricare casetă: se deschide o singură bulă cu toate codurile, roșu sus, apoi
+  portocaliu și galben. Pentru fiecare: fenomenele cu perioada fiecăruia și ce înseamnă codul
+  (după ANM). Bula se lungește cât e nevoie. Se închide singură după 5 s (WARN_SECONDS) sau
+  din „Închide”. O atingere în afara ei o închide doar după primele 5 s (WARN_KEEP_SECONDS).
+  Bula e desenată dinainte, așa că apare imediat, iar la închidere se reface doar zona ei.
   Cod galben: casetă gri deschis. Cod portocaliu și roșu: casetă gri mediu. Codul roșu are
   în plus un triunghi cu „!” lângă casetă (contur negru, interior alb, „!” negru).
   Icoana vremii stă mereu sub textele avertizărilor (se micșorează dacă nu încape).
@@ -74,6 +81,14 @@ Ecranul:
 - Jos: „actualizat HH:MM” și bateria. „Se încarcă” la încărcat, „Încarcă bateria” sub 25%.
   Ambele mesaje au aceeași zonă, ștearsă complet înainte de fiecare scriere.
   Dacă vremea nu s-a putut descărca de mult: „! fără date din HH:MM”, negru.
+  Dacă Open-Meteo nu răspunde, prognoza vine de la MET Norway (Norvegia, gratuit):
+  „actualizat HH:MM · MET Norway”. Cât timp Wi-Fi-ul repornește: „repornesc Wi-Fi…”.
+
+Fără internet:
+- după 3 încercări la 15 s, Wi-Fi-ul se oprește și pornește singur (cel mult o dată la
+  10 minute), apoi vremea se reîncearcă la 2, 5, 10, 15, apoi la fiecare 30 de minute
+  (nu la fiecare minut). „Actualizează vremea” din meniu reîncearcă imediat.
+  Setări: WIFI_RESTART, NET_RETRY_MINUTES, MET_FALLBACK.
 
 Automat:
 - după apus, lumina trece pe Mediu (sau se stinge, dacă bateria e sub 25%);
@@ -92,11 +107,17 @@ Starea cerului: din norii joși și medii (nu din norii înalți, subțiri). Nor
 Setări: meteoalarmkindle.conf (locație, fus orar, trepte de lumină, LANDSCAPE_ROTA,
 MODEL, CLOUD_REFINE, LOW_OVERCAST, NIGHT_START/NIGHT_END, NIGHT_WEATHER_MINUTES,
 AUTO_LIGHT, EVENING_LIGHT, BATT_LOW, LIGHT_BLINK_AT, LIGHT_RESUME, SHOW_FEELS, WARNINGS, POLLEN,
-ALT_BOXES, MENU_SECONDS, LIGHT_SECONDS, CLOSE_OUTSIDE).
+ALT_BOXES, MENU_SECONDS, LIGHT_SECONDS, CLOSE_OUTSIDE, WARN_SECONDS, WARN_KEEP_SECONDS, WARN_FAST,
+MET_FALLBACK,
+WIFI_RESTART, NET_RETRY_MINUTES, LOG_DAYS).
 Orașul ales rămâne salvat (city.sel). Lista e în cities.txt: poți adăuga localități.
 Paginile cu județe și localități sunt gata desenate în ui/loc/ (se deschid repede). Dacă
 modifici cities.txt, paginile schimbate se desenează nume cu nume, puțin mai încet.
-Jurnal: meteoalarmkindle.log (ultimele 300 de linii). La pornire scrie versiunea („start v2.062 …”), iar alegerile din meniul ☰ apar ca „menu: …”.
+Jurnal: meteoalarmkindle.log păstrează ultimele 5 zile (LOG_DAYS). În a 6-a zi, cea mai veche
+zi se șterge; erorile ei trec în meteoalarmkindle-erori.log și rămân acolo până când acel lucru
+(vremea, avertizările, aerul, ora) merge din nou. Fără erori nerezolvate, fișierul nu există.
+La pornire scrie versiunea („start v2.064 …”), iar alegerile din meniul ☰ apar ca „menu: …”.
+Rețeaua apare ca „met:”, „wifi:” și „net:”.
 Dacă se blochează: ține apăsat butonul de pornire ~20 s.
 
 Despre: Meteo Alarm Kindle rulează prin KUAL (Kindle Unified Application Launcher) și a

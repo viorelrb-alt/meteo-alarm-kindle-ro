@@ -200,6 +200,15 @@ def tip(down=False):
     return c
 
 
+def warn_ends():
+    # Rounded top and bottom of the warnings bubble (700 wide, 16 high each); the script draws
+    # the sides and the inside between them (draw_warn_popup, WB_W).
+    c = Canvas(700, 40)
+    c.frame(0, 0, 700, 40, r=12)
+    big = c.im.resize((700, 40), Image.LANCZOS)
+    return big.crop((0, 0, 700, 16)), big.crop((0, 24, 700, 40))
+
+
 def warn_sign():
     # Red warning: a triangle with a black outline, white inside and a black "!", 46 x 42.
     c = Canvas(46, 42)
@@ -332,6 +341,9 @@ if __name__ == '__main__':
         b.button(kind, 0, 0, fill=PRESS)
         b.save('btn-%s-apasat.png' % kind)
     warn_sign().save('atentie.png')
+    top, bottom = warn_ends()
+    top.save(os.path.join(OUT, 'bula-sus.png'), optimize=True)
+    bottom.save(os.path.join(OUT, 'bula-jos.png'), optimize=True)
     now_arrow().save('acum.png')
     place_pages()
     tip().save('varf-sus.png')

@@ -16,7 +16,7 @@
 # While running, pressing the power button exits back to the Kindle UI.
 
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin:/mnt/us/libkh/bin
-VERSION=2.064
+VERSION=2.066
 
 DIR=$(cd "$(dirname "$0")/.." && pwd)
 . "$DIR/meteoalarmkindle.conf"
@@ -112,9 +112,9 @@ load_lang() {
 		T_UPDATING="updating…" T_RETURN="Returning to Kindle…" T_WIFI="restarting Wi-Fi…"
 		T_LIGHTT=LIGHT T_LIGHTOFF="LIGHT OFF" T_LIGHTH1="Swipe up or down" T_LIGHTH2="on the left edge of the screen." T_PICK="Choose county" T_PICKTOWN="choose town"
 		T_BACK=Back T_PAGE=Page T_CLOSE=Close T_NEXT=Next
-		T_FEELS="Feels like" T_WIND=Wind T_HI=High T_LO=Low T_CHARGING=Charging T_CHARGEME="Charge me"
+		T_FEELS="Feels like" T_WIND=Wind T_HI=High T_LO=Low T_CHARGING=Charging T_CHARGEME="Charge me" T_PROTECT="Protected ${CHARGE_LIMIT:-80}%"
 		T_WARN="YELLOW ORANGE RED" T_WARNCODE=WARNING T_WARNSRC="Source: MeteoAlarm, ANM" T_NOWARN="NO WEATHER WARNINGS"
-		T_DAY1=TOMORROW T_DAY2="DAY AFTER" T_NEXT12="NEXT 12 HOURS" T_NOWMARK=now T_RAINUP=RAIN T_SNOWUP=SNOW
+		T_DAY1=TOMORROW T_DAY2="DAY AFTER" T_NEXT12="NEXT 12 HOURS" T_NOWMARK=now T_RAINUP=RAIN T_SNOWUP=SNOW T_TOTAL=total
 		T_LEGSNOW=snow T_LEGRAIN=rain T_LEGDRY="no precipitation" T_POP=rain
 		T_SUN=SUN T_UV="UV INDEX" T_POLLEN=POLLEN T_SUNRISE=Sunrise T_SUNSET=Sunset
 		T_UVLV="Low|Moderate|High|Very high|Extreme" T_POLLV="Low|Moderate|High|Very high"
@@ -124,7 +124,7 @@ load_lang() {
 		T_AQILV="Good|Fair|Moderate|Poor|Very poor|Extremely poor"
 		T_M_FLIP="Rotate screen 180°" T_M_VIEW="View:" T_V_SIMPLE=simple T_V_LIST="5-day list"
 		T_M_ORIENT="Orientation:" T_O_P=portrait T_O_L=landscape T_M_REFRESH="Refresh weather"
-		T_M_TEMP="Temperature:" T_M_CLOCK="Clock:" T_M_LANG="Language: Romanian"
+		T_M_TEMP="Temperature:" T_M_CLOCK="Clock:" T_M_LANG="Language: Romanian" T_M_PROT_OFF="Protection ${CHARGE_LIMIT:-80}%: turn off" T_M_PROT_ON="Protection ${CHARGE_LIMIT:-80}%: turn on"
 	else
 		UI_LANG=ro
 		T_UNTIL="până la" T_NOW=acum T_RAIN=Ploaie T_RAINFROM="Ploaie de la" T_MAX=maxim
@@ -133,9 +133,9 @@ load_lang() {
 		T_UPDATING="se actualizează…" T_RETURN="Revenire la Kindle…" T_WIFI="repornesc Wi-Fi…"
 		T_LIGHTT=LUMINA T_LIGHTOFF="LUMINA STINSĂ" T_LIGHTH1="Glisează în sus sau în jos" T_LIGHTH2="pe marginea stângă a ecranului." T_PICK="Alege județul" T_PICKTOWN="alege localitatea"
 		T_BACK=Înapoi T_PAGE=Pagina T_CLOSE=Închide T_NEXT=Înainte
-		T_FEELS=Resimțit T_WIND=Vânt T_HI=Max T_LO=Min T_CHARGING="Se încarcă" T_CHARGEME="Încarcă bateria"
+		T_FEELS=Resimțit T_WIND=Vânt T_HI=Max T_LO=Min T_CHARGING="Se încarcă" T_CHARGEME="Încarcă bateria" T_PROTECT="Protecție ${CHARGE_LIMIT:-80}%"
 		T_WARN="GALBEN PORTOCALIU ROȘU" T_WARNCODE=COD T_WARNSRC="Sursa: MeteoAlarm, ANM" T_NOWARN="FĂRĂ AVERTIZĂRI METEO"
-		T_DAY1=MÂINE T_DAY2=POIMÂINE T_NEXT12="URMĂTOARELE 12 ORE" T_NOWMARK=acum T_RAINUP=PLOAIE T_SNOWUP=NINSOARE
+		T_DAY1=MÂINE T_DAY2=POIMÂINE T_NEXT12="URMĂTOARELE 12 ORE" T_NOWMARK=acum T_RAINUP=PLOI T_SNOWUP=ZĂPADĂ T_TOTAL=total
 		T_LEGSNOW=ninsoare T_LEGRAIN=ploaie T_LEGDRY="fără precipitații" T_POP=ploaie
 		T_SUN=SOARE T_UV="INDICE UV" T_POLLEN=POLEN T_SUNRISE=Răsărit T_SUNSET=Apus
 		T_UVLV="Scăzut|Moderat|Ridicat|Foarte ridicat|Extrem" T_POLLV="Scăzut|Moderat|Ridicat|Foarte ridicat"
@@ -145,7 +145,7 @@ load_lang() {
 		T_AQILV="Bun|Acceptabil|Moderat|Slab|Foarte slab|Extrem de slab"
 		T_M_FLIP="Întoarce ecranul 180°" T_M_VIEW="Vedere:" T_V_SIMPLE=simplă T_V_LIST="listă 5 zile"
 		T_M_ORIENT="Orientare:" T_O_P=portret T_O_L=peisaj T_M_REFRESH="Actualizează vremea"
-		T_M_TEMP="Temperatura:" T_M_CLOCK="Ora:" T_M_LANG="Limba: engleză"
+		T_M_TEMP="Temperatura:" T_M_CLOCK="Ora:" T_M_LANG="Limba: engleză" T_M_PROT_OFF="Protecție ${CHARGE_LIMIT:-80}%: oprește" T_M_PROT_ON="Protecție ${CHARGE_LIMIT:-80}%: pornește"
 	fi
 	# Units: temperature (C or F) and clock (24 h or 12 h with AM/PM).
 	UNIT_T=$(cat "$DIR/temp.sel" 2>/dev/null)
@@ -253,9 +253,10 @@ wx_days() {
 		}'
 }
 
-# Per-hour series for the precipitation chart (hour, probability, wet flag, snow flag), the
-# first wet hour, the hour that wet run ends (empty if it outlasts the window), the max
-# probability, and whether most wet hours bring snow (W_SNOW_MAJ=1), as W_* lines.
+# Per-hour series for the precipitation boxes (hour, probability, amount in mm with one
+# decimal, wet flag, snow flag), the first wet hour, the hour that wet run ends (empty if it
+# outlasts the window), the max probability, the total amount (W_RAIN_TOT, mm) and whether
+# most wet hours bring snow (W_SNOW_MAJ=1), as W_* lines.
 # wx_rain TIMES PROBS AMTS CODES SNOWS (comma separated hourly arrays)
 wx_rain() {
 	awk -v times="$1" -v probs="$2" -v amts="$3" -v codes="$4" -v snows="$5" \
@@ -263,7 +264,7 @@ wx_rain() {
 		BEGIN {
 			n = split(times, t, ","); split(probs, p, ","); split(amts, a, ",")
 			split(codes, c, ","); split(snows, s, ",")
-			hours = ""; ps = ""; wets = ""; sns = ""; at = ""; stop = ""; maxp = 0; nsn = 0; nrn = 0
+			hours = ""; ps = ""; ams = ""; wets = ""; sns = ""; at = ""; stop = ""; maxp = 0; nsn = 0; nrn = 0; tot = 0
 			for (i = 1; i <= n; i++) {
 				gsub(/"/, "", t[i]); hr = substr(t[i], 12, 5)
 				pv = (p[i] == "null") ? 0 : p[i] + 0
@@ -279,10 +280,13 @@ wx_rain() {
 				sep = (i > 1) ? " " : ""
 				hours = hours sep hr
 				ps = ps sep sprintf("%d", pv)
+				ams = ams sep sprintf("%.1f", av)
+				tot += av
 				wets = wets sep wet
 				sns = sns sep sn
 			}
 			printf "W_HOURS=\"%s\"\nW_PROBS=\"%s\"\nW_WET=\"%s\"\nW_SNOWY=\"%s\"\n", hours, ps, wets, sns
+			printf "W_AMTS=\"%s\"\nW_RAIN_TOT=%.1f\n", ams, tot
 			printf "W_RAIN_AT=\"%s\"\nW_RAIN_END=\"%s\"\nW_RAIN_MAXP=%d\nW_SNOW_MAJ=%d\n", at, stop, maxp, (nsn > nrn) ? 1 : 0
 		}'
 }
@@ -1499,101 +1503,72 @@ draw_warnings() {
 	WARN_SHOWN=$wshown
 }
 
-# Hourly precipitation chart: one bar per forecast hour, height = probability; black for rain,
-# dark gray for snow, light gray for dry hours; a dotted line marks RAIN_PROBABILITY and every
-# third hour is labelled below. draw_precip_chart LEFT WIDTH TOP HEIGHT
-draw_precip_chart() {
-	cl=$1 cw=$2 ct=$3 ch=$4
-	set -- $W_PROBS
-	cn=$#
-	[ "$cn" -gt 0 ] || return 0
-	pitch=$((cw / cn))
-	bw=$((pitch * 85 / 100))
-	ty=$((ct + ch - RAIN_PROBABILITY * ch / 100))
-	fb_image "$DIR/ui/punctat.png" "$cl" "$ty" "$cw" 2
-	hrs="$W_HOURS " wets="$W_WET " sns="$W_SNOWY "
-	ci=0
-	for p in $W_PROBS; do
-		hr=${hrs%% *} hrs=${hrs#* }
-		wet=${wets%% *} wets=${wets#* }
-		sn=${sns%% *} sns=${sns#* }
-		bh=$((p * ch / 100))
-		[ "$bh" -lt 4 ] && bh=4
-		color=GRAYA
-		if [ "$wet" = 1 ]; then
-			color=BLACK
-			[ "$sn" = 1 ] && color=GRAY5
-		fi
-		x=$((cl + ci * pitch + (pitch - bw) / 2))
-		fb_rect $((ct + ch - bh)) "$x" "$bw" "$bh" "$color"
-		[ $((ci % 3)) -eq 0 ] && fb_ltext "$F_REG" 23 $((ct + ch + 8)) "$x" "$hr" -C GRAY5
-		ci=$((ci + 1))
-	done
-	draw_now_mark
+# Amount for the boxes: "2,4 mm" (Romanian decimal comma), "0 mm" when none, "–" when the
+# forecast was saved by an older version (no W_AMTS). mm_text VALUE
+mm_text() {
+	case $1 in
+	"" | -) echo "–" ;;
+	0.0 | 0) echo "0 mm" ;;
+	*) if [ "$UI_LANG" = ro ]; then echo "$1 mm" | tr . ,; else echo "$1 mm"; fi ;;
+	esac
 }
 
-# "acum" over the chart where the current time falls (by the minute: at 14:20, a third into
-# the 14:00 bar): a black arrowhead (ui/acum.png) under the word, and a dotted line from it
-# down to the top of that hour's bar. The chart starts at the hour of the last download.
-draw_now_mark() {
-	set -- $(date '+%H %M')
-	nm_h=${1#0} nm_m=${2#0}
+# One small box per forecast hour (2.065, in place of the bar chart): the hour, the
+# probability and the expected amount. Wet hours: light gray box, black text; dry hours: white
+# box with a gray outline, gray text; the current hour has a thick outline. The backgrounds
+# are ui/ora-{ud,uscat}[-acum]-{p,l}.png (tools/make_ui.py).
+# draw_precip_cells LEFT TOP COLS CELL_W CELL_H GAP_X GAP_Y SUFFIX HOUR_PX PROB_PX MM_PX
+#   HOUR_TOP PROB_TOP MM_TOP (the last three: offsets inside the box)
+draw_precip_cells() {
+	gl=$1 gt=$2 gc=$3 gw=$4 gh=$5 gx=$6 gy=$7 gs=$8 g_hp=$9 g_pp=${10} g_mp=${11} g_ht=${12} g_pt=${13} g_mt=${14}
+	nm_h=$(date '+%H')
+	nm_h=${nm_h#0}
 	nm_f=${W_HOURS%%:*}
 	nm_f=${nm_f#0}
 	nm_o=$(((${nm_h:-0} - ${nm_f:-0} + 24) % 24))
-	[ "$nm_o" -lt "$cn" ] || return 0
-	nm_x=$((cl + nm_o * pitch + ${nm_m:-0} * pitch / 60))
-	fb_image "$DIR/ui/acum.png" $((nm_x - 8)) $((ct - 8)) 16 11
-	fb_ctext "$F_BOLD" 15 $((ct - 25)) "$nm_x" "$T_NOWMARK" -O
-	nm_p=$(echo $W_PROBS | cut -d' ' -f$((nm_o + 1)))
-	nm_bh=$((${nm_p:-0} * ch / 100))
-	[ "$nm_bh" -lt 4 ] && nm_bh=4
-	nm_end=$((ct + ch - nm_bh - 2))
-	nm_y=$((ct + 6))
-	while [ "$nm_y" -lt "$nm_end" ]; do
-		nm_l=6
-		[ $((nm_y + nm_l)) -gt "$nm_end" ] && nm_l=$((nm_end - nm_y))
-		fb_rect "$nm_y" $((nm_x - 1)) 2 "$nm_l" BLACK
-		nm_y=$((nm_y + 10))
+	hrs="$W_HOURS " prs="$W_PROBS " wets="$W_WET " ams="${W_AMTS:-- - - - - - - - - - - -} "
+	ci=0
+	while [ -n "${hrs# }" ] && [ "$ci" -lt 12 ]; do
+		hr=${hrs%% *} hrs=${hrs#* }
+		p=${prs%% *} prs=${prs#* }
+		wet=${wets%% *} wets=${wets#* }
+		am=${ams%% *} ams=${ams#* }
+		[ -n "$hr" ] || break
+		cx=$((gl + (ci % gc) * (gw + gx)))
+		cy=$((gt + (ci / gc) * (gh + gy)))
+		if [ "$wet" = 1 ]; then cb=ud cc=BLACK; else cb=uscat cc=GRAY5; fi
+		[ "$ci" = "$nm_o" ] && cb=$cb-acum
+		fb_image "$DIR/ui/ora-$cb-$gs.png" "$cx" "$cy" "$gw" "$gh"
+		cm=$((cx + gw / 2))
+		fb_ctext "$F_BOLD" "$g_hp" $((cy + g_ht)) "$cm" "$hr" -O -C "$cc"
+		ppx=$(fit_px "$F_BOLD" "$g_pp" $((gw - 8)) "$p%")
+		fb_ctext "$F_BOLD" "$ppx" $((cy + g_pt + (g_pp - ppx) / 2)) "$cm" "$p%" -O -C "$cc"
+		mt=$(mm_text "$am")
+		mpx=$(fit_px "$F_REG" "$g_mp" $((gw - 8)) "$mt")
+		fb_ctext "$F_REG" "$mpx" $((cy + g_mt)) "$cm" "$mt" -O -C "$cc"
+		ci=$((ci + 1))
 	done
 }
 
-# Legend under the precipitation title (only when snow is due): draw_legend LEFT TOP
-draw_legend() {
-	lx=$1
-	for it in "GRAY5|$T_LEGSNOW" "BLACK|$T_LEGRAIN" "GRAYA|$T_LEGDRY"; do
-		fb_rect "$2" "$lx" 16 16 "${it%%|*}"
-		fb_ltext "$F_REG" 20 $(($2 - 2)) $((lx + 23)) "${it#*|}" -C GRAY5
-		lx=$((lx + 23 + $(tw_c "$F_REG" 20 "${it#*|}") + 22))
-	done
-}
-
-# Precipitation box (frame and black header are in the chrome): title, window, peak, chart.
+# Precipitation box (frame and gray header are in the chrome): title (PLOI or ZĂPADĂ), the
+# rain window and the total amount, then a box for each of the next 12 hours.
 # draw_precip_box LEFT TOP WIDTH HEIGHT HEADER
 draw_precip_box() {
 	pl=$1 pt=$2 pw=$3 ph=$4 phd=$5
 	if [ "$PREC_SNOW" = 1 ]; then pk=$T_SNOWUP; else pk=$T_RAINUP; fi
 	fb_head "$pt" "$phd" $((pl + pw / 2)) $((pw - 40)) "$pk · $T_NEXT12"
-	pleg=0
-	case " $W_SNOWY " in *" 1 "*) pleg=1 ;; esac
+	ptot=""
+	[ -n "$W_AMTS" ] && ptot="$T_TOTAL $(mm_text "${W_RAIN_TOT:-0}")"
 	if [ "$ORIENT" = landscape ]; then
-		fb_ltext "$F_BOLD" 31 $((pt + 66)) $((pl + 21)) "$rain_text"
-		fb_ltext "$F_REG" 26 $((pt + 70)) $((pl + 27 + $(tw_c "$F_BOLD" 31 "$rain_text"))) "$T_MAX $W_RAIN_MAXP%" -C GRAY5
-		if [ "$pleg" = 1 ]; then
-			draw_legend $((pl + 21)) $((pt + 112))
-			draw_precip_chart $((pl + 18)) $((pw - 36)) $((pt + 162)) $((ph - 230))
-		else
-			draw_precip_chart $((pl + 18)) $((pw - 36)) $((pt + 120)) $((ph - 188))
-		fi
+		[ -n "$ptot" ] && fb_rtext "$F_REG" 26 $((pt + 66)) $((pl + pw - 20)) "$ptot" -C GRAY5
+		rpx=$(fit_px "$F_BOLD" 31 $((pw - 60 - $(tw_c "$F_REG" 26 "$ptot"))) "$rain_text")
+		fb_ltext "$F_BOLD" "$rpx" $((pt + 62 + (31 - rpx) / 2)) $((pl + 20)) "$rain_text"
+		draw_precip_cells $((pl + 16)) $((pt + 102)) 3 138 90 11 10 l 25 36 24 7 32 64
 	else
-		fb_ltext "$F_BOLD" 36 $((pt + 63)) $((pl + 22)) "$rain_text"
-		fb_rtext "$F_REG" 29 $((pt + 68)) $((pl + pw - 20)) "$T_MAX $W_RAIN_MAXP%" -C GRAY5
-		if [ "$pleg" = 1 ]; then
-			draw_legend $((pl + 20)) $((pt + 108))
-			draw_precip_chart $((pl + 16)) $((pw - 34)) $((pt + 140)) $((ph - 186))
-		else
-			draw_precip_chart $((pl + 16)) $((pw - 34)) $((pt + 120)) $((ph - 166))
-		fi
+		[ -n "$ptot" ] && fb_rtext "$F_REG" 29 $((pt + 66)) $((pl + pw - 20)) "$ptot" -C GRAY5
+		rpx=$(fit_px "$F_BOLD" 36 $((pw - 60 - $(tw_c "$F_REG" 29 "$ptot"))) "$rain_text")
+		fb_ltext "$F_BOLD" "$rpx" $((pt + 60 + (36 - rpx) / 2)) $((pl + 20)) "$rain_text"
+		draw_precip_cells $((pl + 16)) $((pt + 116)) 6 101 112 8 10 p 26 36 25 8 39 78
 	fi
 }
 
@@ -1996,7 +1971,9 @@ read_status() {
 	[ -f "$STATE/fetching" ] && ST_BUSY=1
 	[ -f "$STATE/wifirestart" ] && ST_BUSY=2
 	ST_SRC=${W_SOURCE:-om}
-	STATUS_KEY="$ST_LVL $ST_CHG $ST_FETCHED $ST_OFFLINE $ST_BUSY $ST_SRC"
+	ST_PROT=0
+	[ -f "$STATE/protect" ] && ST_PROT=1
+	STATUS_KEY="$ST_LVL $ST_CHG $ST_PROT $ST_FETCHED $ST_OFFLINE $ST_BUSY $ST_SRC"
 }
 
 # Battery (black glyph, bold percentage, "Se încarcă" / "Încarcă bateria" in bold) ending at
@@ -2016,7 +1993,10 @@ draw_status() {
 		fb_rtext "$F_BOLD" 26 $((gy - 4)) $((gx - 7)) "$ST_LVL%"
 		bat_left=$RTEXT_LEFT
 		msg=""
-		if [ "$ST_CHG" = 1 ]; then
+		if [ "$ST_PROT" = 1 ]; then
+			# Charging stopped by the protection (powerd still says "charging").
+			msg=$T_PROTECT
+		elif [ "$ST_CHG" = 1 ]; then
 			fb_image "$DIR/icons/bolt.png" $((bat_left - 16)) $((gy + 2)) 11 17
 			bat_left=$((bat_left - 16))
 			msg=$T_CHARGING
@@ -2062,9 +2042,9 @@ set_bands() {
 	if [ "$ORIENT" = landscape ]; then
 		CLK_PX=58 CLOCK_TOP=18 CLK_R=826 CLK_L=560 CLOCK_H=58 DATE_Y=74 DATE_R=825
 		B_MENU="846 680" B_LIGHT="846 24" B_EXIT="920 24" B_CITY="920 680"
-		MENU_X=604 MENU_Y=282 B_LIGHT_R=984
-		# Menu tip: points down at the ☰ button.
-		MENU_TIP="866 $((282 + 378 - 2)) jos"
+		MENU_X=604 MENU_Y=228 B_LIGHT_R=984
+		# Menu tip: points down at the ☰ button (8 rows of 54 since 2.066).
+		MENU_TIP="866 $((228 + 432 - 2)) jos"
 		WARN_L=54 WARN_Y=68 WARN_LW=330
 		BAT_R=836 BAT_Y=702 UPD_R=984 UPD_Y=111
 		# ST1 reaches the left edge of the right column, so the longest battery message
@@ -2082,7 +2062,7 @@ set_bands() {
 		ST1="958 110 608 44" ST2=""
 		SW_TOP=110 SW_BOT=930
 	fi
-	MENU_W=380 MENU_H=378 LP_W=340 LP_H=150
+	MENU_W=380 MENU_H=432 LP_W=340 LP_H=150
 	# Light bubble: right-aligned under the light button (its tip 222 px in, on the button).
 	LP_X=$((B_LIGHT_R - LP_W)) LP_Y=98
 }
@@ -2223,10 +2203,10 @@ finish_draw() {
 
 # Rows of the ☰ menu, by id: o orientation, v view, f flip, r refresh, t °C/°F, c 12h/24h,
 # l language. The first four are in the order last used (like the favourite cities), from
-# o v f r at each start ($STATE/menuorder); t c l stay at the bottom.
+# o v f r at each start ($STATE/menuorder); t c p l stay at the bottom (p: Protecție 80%, 2.066).
 menu_ids() {
 	mi=$(cat "$STATE/menuorder" 2>/dev/null)
-	echo "${mi:-o v f r} t c l"
+	echo "${mi:-o v f r} t c p l"
 }
 
 # menu_used ID: one of the first four goes to the top.
@@ -2234,7 +2214,7 @@ menu_used() {
 	case $1 in o | v | f | r) ;; *) return 0 ;; esac
 	mu=$1
 	for mi in $(menu_ids); do
-		case $mi in "$1" | t | c | l) ;; *) mu="$mu $mi" ;; esac
+		case $mi in "$1" | t | c | p | l) ;; *) mu="$mu $mi" ;; esac
 	done
 	echo "$mu" >"$STATE/menuorder"
 }
@@ -2254,6 +2234,9 @@ menu_labels() {
 		r) ml=$T_M_REFRESH ;;
 		t) ml="$T_M_TEMP °$ml_t" ;;
 		c) ml="$T_M_CLOCK $ml_c" ;;
+		p)
+			if [ "$(cat "$PROTECT_SEL" 2>/dev/null)" = 0 ]; then ml=$T_M_PROT_ON; else ml=$T_M_PROT_OFF; fi
+			;;
 		*) ml=$T_M_LANG ;;
 		esac
 		ml_out="$ml_out${ml_out:+|}$ml"
@@ -3176,6 +3159,12 @@ menu_action() {
 		if [ "$CLK12" = 1 ]; then echo 24 >"$DIR/clock.sel"; else echo 12 >"$DIR/clock.sel"; fi
 		want_redraw
 		;;
+	p)
+		# Protecție 80% on or off; applied at once (charging back on when turned off).
+		if [ "$(cat "$PROTECT_SEL" 2>/dev/null)" = 0 ]; then echo 1 >"$PROTECT_SEL"; else echo 0 >"$PROTECT_SEL"; fi
+		charge_guard
+		want_redraw
+		;;
 	*)
 		if [ "$UI_LANG" = en ]; then echo ro >"$LANG_SEL"; else echo en >"$LANG_SEL"; fi
 		want_redraw
@@ -3345,6 +3334,77 @@ after_sunset() {
 	fi
 }
 
+# --- Protecție 80% (2.066) ----------------------------------------------------
+# Battery care while the Kindle is left on the charger. At CHARGE_LIMIT % (plugged in) charging
+# is switched off through the charger driver (aplite_charger, Paperwhite 1); the Kindle then
+# runs from its battery (about 65 mA) and at CHARGE_RESUME % charging is switched on again. The
+# status bar says "Protecție 80%" meanwhile (powerd does not notice and still says charging).
+# Charging is always switched back on when the charger is unplugged, when the protection is
+# turned off and when the app stops. Idea from Charge Limit 1.1.0 (a Kindle/Kobo package that
+# does not run on the PW1); this is a shell-only rewrite for the PW1's own driver.
+# protectie.sel: 0 = off (KUAL: "Protecție 80%"); full.sel: charge to 100% once, until the
+# charger is next unplugged (KUAL: "Încarcă o dată la 100%").
+CHG_SW=/sys/devices/platform/aplite_charger.0/charging
+CHG_CONN=/sys/devices/platform/aplite_charger.0/connected
+CHG_CAP=/sys/devices/system/yoshi_battery/yoshi_battery0/battery_capacity
+PROTECT_SEL=$DIR/protectie.sel
+FULL_SEL=$DIR/full.sel
+
+# charge_set 0|1 WHY: write the charger switch and log it (with what reads back).
+charge_set() {
+	echo "$1" >"$CHG_SW" 2>/dev/null
+	log "charge: $2, switch $1 (reads $(cat "$CHG_SW" 2>/dev/null)), battery ${cg_cap:-?}%"
+}
+
+# Give charging back to the driver if the protection had stopped it.
+charge_release() {
+	[ -f "$STATE/protect" ] || return 0
+	rm -f "$STATE/protect"
+	[ -w "$CHG_SW" ] && charge_set 1 "$1"
+}
+
+charge_guard() {
+	[ -w "$CHG_SW" ] || return 0
+	cg_conn=$(cat "$CHG_CONN" 2>/dev/null)
+	cg_on=$(cat "$CHG_SW" 2>/dev/null)
+	cg_cap=$(cat "$CHG_CAP" 2>/dev/null)
+	cg_cap=${cg_cap%%%*}
+	case $cg_cap in '' | *[!0-9]*) cg_cap=$ST_LVL ;; esac
+	case $cg_cap in '' | *[!0-9]*) return 0 ;; esac
+	cg_lim=${CHARGE_LIMIT:-80}
+	cg_res=${CHARGE_RESUME:-75}
+	if [ "$cg_conn" != 1 ]; then
+		charge_release "unplugged"
+		# A full charge lasts until the charger is unplugged after it was plugged in.
+		if [ -f "$STATE/fullplugged" ]; then
+			rm -f "$STATE/fullplugged" "$FULL_SEL"
+			log "charge: unplugged after a full charge, protection back"
+		fi
+		return 0
+	fi
+	if [ "$cg_lim" -le 0 ] || [ "$cg_lim" -ge 100 ] || [ "$(cat "$PROTECT_SEL" 2>/dev/null)" = 0 ]; then
+		charge_release "protection off"
+		return 0
+	fi
+	if [ -f "$FULL_SEL" ]; then
+		touch "$STATE/fullplugged"
+		charge_release "full charge once"
+		return 0
+	fi
+	if [ "$cg_cap" -ge "$cg_lim" ]; then
+		touch "$STATE/protect"
+		[ "$cg_on" = 0 ] || charge_set 0 "at the limit (${cg_lim}%)"
+	elif [ -f "$STATE/protect" ]; then
+		if [ "$cg_cap" -le "$cg_res" ]; then
+			charge_release "down to ${cg_res}%"
+		elif [ "$cg_on" != 0 ]; then
+			# Between the two the driver may switch charging back on (it restarts a full
+			# battery by itself): keep it off until CHARGE_RESUME.
+			charge_set 0 "kept off (driver switched it on)"
+		fi
+	fi
+}
+
 # --- Main loop -------------------------------------------------------------
 
 run() {
@@ -3367,6 +3427,9 @@ run() {
 	trap ':' USR1
 
 	NATIVE_ROTA=$(cat /sys/class/graphics/fb0/rotate 2>/dev/null)
+	# Left over from an app that did not stop cleanly: charging back on first.
+	charge_release "left over at start"
+	rm -f "$STATE/fullplugged"
 	rm -f "$STATE/redraw" "$STATE/softdraw" "$STATE/fetchnow" "$STATE/layoutreq" "$STATE/lightidx" "$STATE/picker" "$STATE/refetch" "$STATE/menu" "$STATE/fetching" "$STATE/drawing" "$STATE/under.fb" "$STATE/clockdraw" "$STATE/menuorder" "$STATE/wifirestart"
 	load_city
 	recent_init
@@ -3444,6 +3507,7 @@ run() {
 			fetch_round && { [ -f "$STATE/picker" ] || [ -f "$STATE/menu" ] || draw 0; }
 		fi
 
+		charge_guard
 		battery_light
 		[ -f "$STATE/picker" ] || auto_light
 
@@ -3514,6 +3578,8 @@ run() {
 				rm -f "$STATE/softdraw"
 				[ -f "$STATE/picker" ] || draw 0
 			elif [ "$wrc" -gt 128 ] && [ ! -f "$STATE/picker" ]; then
+				# A power event (plugged, unplugged, level): the protection first.
+				charge_guard
 				refresh_status
 			fi
 		done
@@ -3523,6 +3589,8 @@ run() {
 shutdown() {
 	trap '' TERM INT HUP
 	log "stop"
+	# Charging is never left off after the app.
+	charge_release "app stops"
 	# Children: the minute sleep, the power-button watcher (plus its dd) and the powerd
 	# event watcher (plus its lipc-wait-event). When started via setsid we lead our own
 	# process group: signal all of it (TERM is ignored here now, so this process survives).
@@ -3588,6 +3656,26 @@ start)
 	# The log keeps 5 days (see trim_log).
 	trim_log
 	setsid "$0" run "$layout" "$(orient_arg "$3")" >>"$LOG" 2>&1 </dev/null &
+	;;
+protect)
+	# KUAL: turn the protection on or off (for the next start; the app runs full screen).
+	if [ "$(cat "$PROTECT_SEL" 2>/dev/null)" = 0 ]; then
+		echo 1 >"$PROTECT_SEL"
+		pmsg="Protectie ${CHARGE_LIMIT:-80}%: PORNITA"
+	else
+		echo 0 >"$PROTECT_SEL"
+		pmsg="Protectie ${CHARGE_LIMIT:-80}%: OPRITA"
+		mkdir -p "$STATE"
+		charge_release "protection off (KUAL)"
+	fi
+	fbink -q -m -y -5 "$pmsg" >/dev/null 2>&1 || eips 1 1 "$pmsg" >/dev/null 2>&1
+	;;
+full)
+	# KUAL: charge to 100% once, until the charger is next unplugged.
+	touch "$FULL_SEL"
+	mkdir -p "$STATE"
+	charge_release "full charge once (KUAL)"
+	fbink -q -m -y -5 "Incarca o data la 100%" >/dev/null 2>&1 || eips 1 1 "Incarca o data la 100%" >/dev/null 2>&1
 	;;
 stop)
 	if is_running; then
@@ -3658,7 +3746,7 @@ preview)
 	esac
 	;;
 *)
-	echo "usage: $0 start [simple|weather] [portrait|landscape]|stop|status|run [...]|fetch|preview [...]" >&2
+	echo "usage: $0 start [simple|weather] [portrait|landscape]|stop|status|run [...]|fetch|preview [...]|protect|full" >&2
 	exit 2
 	;;
 esac

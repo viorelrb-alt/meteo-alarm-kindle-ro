@@ -1,4 +1,4 @@
-# Meteo Alarm Kindle: changelog (latest: v2.064)
+# Meteo Alarm Kindle: changelog (latest: v2.066)
 
 Weather clock with MeteoAlarm warnings for the Kindle Paperwhite 1: a KUAL extension (shell
 script + FBInk). It runs through KUAL (Kindle Unified Application Launcher) and grew out of
@@ -7,8 +7,48 @@ Weather, UV index, air quality and pollen from Open-Meteo (MET Norway as the fal
 
 ## Version
 
-2.064: codes of the same color in one box, one details bubble for all codes that shows at once and closes by itself after 5 s. 2.063: MET Norway fallback forecast, automatic Wi-Fi restart and slower retries without network, warnings of the same color and period in one box with a details bubble, 5-day log with a separate file of unsolved errors. 2.062: UV index from the air quality service (humidity without it), moon / pressure / air quality boxes, low-battery light blink and pause. 2.061: portrait no-codes layout side by side, ☰ menu order, fixes from the 2.06 log. 2.06: menus close at once, Kobo-style light bar, battery text fix, version in the log. 2.055: larger box titles, separate boxes, capitals for the info lines, icon fixes. 2.054: no-codes layout, "now" marker, light panel fixes. 2.053: faster city picker, pressed buttons, larger light panel. 2.052: renamed to Meteo Alarm Kindle. 2.051: small design fixes. 2.05: layout fixes after the second Kindle test. 2.04: Back / Close / Next row in the city picker. 2.03: the city picker is a speech bubble. 2.02: fixes from the first test on the Kindle. 2.01 was the first release of the new interface (2.xx).
+2.066: Protecție 80% (battery care on the charger). 2.065: the 12-hour precipitation chart becomes 12 small hourly boxes (hour, probability, amount), titled PLOI or ZĂPADĂ. 2.064: codes of the same color in one box, one details bubble for all codes that shows at once and closes by itself after 5 s. 2.063: MET Norway fallback forecast, automatic Wi-Fi restart and slower retries without network, warnings of the same color and period in one box with a details bubble, 5-day log with a separate file of unsolved errors. 2.062: UV index from the air quality service (humidity without it), moon / pressure / air quality boxes, low-battery light blink and pause. 2.061: portrait no-codes layout side by side, ☰ menu order, fixes from the 2.06 log. 2.06: menus close at once, Kobo-style light bar, battery text fix, version in the log. 2.055: larger box titles, separate boxes, capitals for the info lines, icon fixes. 2.054: no-codes layout, "now" marker, light panel fixes. 2.053: faster city picker, pressed buttons, larger light panel. 2.052: renamed to Meteo Alarm Kindle. 2.051: small design fixes. 2.05: layout fixes after the second Kindle test. 2.04: Back / Close / Next row in the city picker. 2.03: the city picker is a speech bubble. 2.02: fixes from the first test on the Kindle. 2.01 was the first release of the new interface (2.xx).
 The 1.xx series is the old interface (last: 1.35).
+
+## What is new in 2.066: Protecție 80%
+
+Battery care for a Kindle left on the charger (it runs the clock all day):
+
+- While the app runs and the charger is plugged in, charging stops at 80% (CHARGE_LIMIT) and
+  starts again at 75% (CHARGE_RESUME). In between the Kindle runs from its battery (about
+  65 mA, so 80% to 75% takes about an hour), then charges back to 80%.
+- The status bar says "Protecție 80%" ("Protected 80%" in English) instead of "Se încarcă":
+  the Kindle's own powerd does not notice and still reports charging.
+- Charging is always switched back on when the charger is unplugged, when the protection is
+  turned off and when the app stops (also after an unclean stop, at the next start).
+- ☰ menu, a new 8th row: "Protecție 80%: oprește / pornește" (protectie.sel; the bubble is
+  now 380 x 432, ui/meniu.png from tools/make_ui.py). KUAL > Meteo Alarm Kindle:
+  "Încarcă o dată la 100%" (full.sel, until the charger is next unplugged).
+- How: the Paperwhite 1 charger driver (aplite_charger, kernel 2.6.31) has a writable switch,
+  /sys/devices/platform/aplite_charger.0/charging. Tested on the Kindle on 11 Nov 2026:
+  0 stopped charging for 2 minutes (current +89 mA -> -61..-74 mA, the driver did not undo
+  it), 1 started it again (+111 mA within 20 s). The battery level is read from
+  /sys/devices/system/yoshi_battery/yoshi_battery0/battery_capacity. Log lines: "charge: ...".
+
+Credit: the idea (stop at a limit, resume 5% lower, run from the charger meanwhile) comes from
+**Charge Limit 1.1.0** (build e691088) by chengandre,
+https://github.com/chengandre/ereader-charge-limit, a charge limiter for Kobo and Kindle readers. Its own
+program does not run on the Paperwhite 1 (it needs Linux 3.2+ and knows other charger chips),
+so this is a separate shell-only rewrite for the PW1's driver; no code was copied.
+
+## What is new in 2.065
+
+The 12-hour precipitation box (simple view) no longer has a bar chart:
+
+- 12 small boxes, one per hour: the hour, the probability (%) and the expected amount (mm,
+  one decimal, "2,4 mm" in Romanian). Wet hours are light gray with black text, dry hours
+  white with gray text; the current hour has a 4 px outline. Portrait: 6 x 2 boxes of
+  101 x 112; landscape: 3 x 4 boxes of 138 x 90. Backgrounds: ui/ora-{ud,uscat}[-acum]-{p,l}.png
+  (tools/make_ui.py, hour_boxes).
+- The title is "PLOI · URMĂTOARELE 12 ORE" or "ZĂPADĂ · URMĂTOARELE 12 ORE" (was PLOAIE /
+  NINSOARE). Right of the rain window: "total 7,8 mm" (was "maxim 100%").
+- wx_rain saves W_AMTS (hourly mm) and W_RAIN_TOT. Data saved by 2.064 has no amounts: the
+  boxes then show "–" until the next download.
 
 ## What is new in 2.064
 

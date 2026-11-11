@@ -12,6 +12,7 @@ This project stands on the work of others. Thank you to everyone who built and s
 | Weather data (CC BY 4.0), DWD ICON model | Open-Meteo | https://open-meteo.com |
 | Pollen (Air Quality API, Copernicus CAMS) | Open-Meteo | https://open-meteo.com/en/docs/air-quality-api |
 | Weather warnings for Romania | MeteoAlarm (EUMETNET), issued by ANM | https://meteoalarm.org |
+| Battery protection idea (Protecție 80%) | chengandre, ereader-charge-limit | https://github.com/chengandre/ereader-charge-limit |
 | Font (SIL OFL 1.1) | Liberation Sans, Red Hat / Google | https://github.com/liberationfonts/liberation-fonts |
 
 ## Who did what

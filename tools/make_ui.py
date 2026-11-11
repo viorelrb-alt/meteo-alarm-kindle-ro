@@ -127,9 +127,9 @@ def l_simplu(c):
 
 # Pop-ups --------------------------------------------------------------------------------
 def menu():
-    c = Canvas(380, 378)
-    c.frame(0, 0, 380, 378)
-    for k in range(1, 7):
+    c = Canvas(380, 432)  # 8 rows of 54 (2.066: Protecție 80%)
+    c.frame(0, 0, 380, 432)
+    for k in range(1, 8):
         c.rect(12, k * 54 - 1, 356, 2, 0x99)
     return c
 
@@ -313,6 +313,28 @@ def icon_boxes():
         out.write('\n'.join(rows) + '\n')
 
 
+def hour_box(w, h, wet, now):
+    """One hour of the precipitation box (2.065): light gray with a black outline when
+    precipitation is due, else white with a mid-gray outline; 4 px black outline for the
+    current hour. The script writes the hour, probability and amount on it."""
+    c = Canvas(w, h)
+    lw = 4 if now else LW
+    edge = 0 if (wet or now) else PRESS
+    c.d.rounded_rectangle(c.s(0, 0, w - 1, h - 1), radius=8 * SS, fill=edge)
+    c.d.rounded_rectangle(c.s(lw, lw, w - 1 - lw, h - 1 - lw), radius=(8 - lw // 2) * SS,
+                          fill=HEAD if wet else 255)
+    return c
+
+
+def hour_boxes():
+    # Portrait: 6 x 2 boxes of 101 x 112; landscape: 3 x 4 boxes of 138 x 90.
+    for suf, w, h in (('p', 101, 112), ('l', 138, 90)):
+        for wet in (True, False):
+            for now in (False, True):
+                name = 'ora-%s%s-%s.png' % ('ud' if wet else 'uscat', '-acum' if now else '', suf)
+                hour_box(w, h, wet, now).save(name)
+
+
 if __name__ == '__main__':
     icon_boxes()
     portrait(lambda c: None).save('p-antet.png')
@@ -349,3 +371,4 @@ if __name__ == '__main__':
     tip().save('varf-sus.png')
     tip(down=True).save('varf-jos.png')
     dotted().save(os.path.join(OUT, 'punctat.png'), optimize=True)
+    hour_boxes()

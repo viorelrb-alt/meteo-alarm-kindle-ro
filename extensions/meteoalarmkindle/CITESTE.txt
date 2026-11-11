@@ -1,4 +1,4 @@
-METEO ALARM KINDLE: ceas, vreme și avertizări pentru Kindle Paperwhite 1 (v2.064)
+METEO ALARM KINDLE: ceas, vreme și avertizări pentru Kindle Paperwhite 1 (v2.066)
 
 Instalare: copiază folderul "extensions" în rădăcina Kindle-ului (Replace).
 Pornire: KUAL > Meteo Alarm Kindle > alege varianta.
@@ -7,11 +7,25 @@ aplicația nouă preia de acolo orașul, °C/°F, 12/24h și limba.
 
 Variante: vreme simplă sau 5 zile, în portret sau peisaj.
 
+Protecție 80% (v2.066): grijă pentru baterie când Kindle-ul stă la încărcător.
+- Cât rulează aplicația și încărcătorul e conectat, încărcarea se oprește la 80% și pornește
+  din nou la 75%. Între timp Kindle-ul merge din baterie (cam o oră de la 80% la 75%).
+- În bara de jos scrie „Protecție 80%” în loc de „Se încarcă”.
+- Încărcarea pornește din nou singură când scoți încărcătorul, când oprești protecția și când
+  ieși din aplicație.
+- Meniul ☰ are un rând nou (al 8-lea): „Protecție 80%: oprește” / „pornește”.
+- KUAL > Meteo Alarm Kindle: „Încarcă o dată la 100%” (ține până scoți încărcătorul).
+- Pragurile se schimbă în meteoalarmkindle.conf: CHARGE_LIMIT=80, CHARGE_RESUME=75
+  (CHARGE_LIMIT=0 = fără protecție). În jurnal: rânduri „charge: …”.
+- Ideea vine de la Charge Limit 1.1.0 (chengandre,
+  https://github.com/chengandre/ereader-charge-limit), un limitator pentru Kobo și Kindle care
+  nu merge pe Paperwhite 1. Aici e rescrisă doar în shell, pentru driverul de încărcare al PW1.
+
 Interfața nouă (2.xx):
 - Sus, dreapta: ceasul și data, apoi butonul de lumină și X (ieșire la Kindle).
-- Butonul ☰ (portret: stânga sus; peisaj: jos, dreapta) deschide meniul cu 7 rânduri. La
+- Butonul ☰ (portret: stânga sus; peisaj: jos, dreapta) deschide meniul cu 8 rânduri. La
   pornire ordinea e: Orientare (portret / peisaj), Vedere (simplu / listă 5 zile), Întoarce
-  ecranul 180°, Actualizează vremea, Temperatura (°C / °F), Ora (24h / 12h), Limba.
+  ecranul 180°, Actualizează vremea, Temperatura (°C / °F), Ora (24h / 12h), Protecție 80%, Limba.
   Primele 4 rânduri se reordonează ca favoritele: cel ales ultima dată urcă primul. Ordinea
   revine la cea de mai sus la fiecare pornire a aplicației.
   Fiecare rând arată alegerea în care treci (ex. în peisaj: „Orientare: portret”; în română:
@@ -63,10 +77,11 @@ Ecranul:
   la mijlocul înălțimii cifrelor.
 - Titlurile casetelor (benzile gri) sunt mari și îngroșate, ca să se vadă de la distanță.
 - Vedere 5 zile: Mâine și Poimâine în casete mari, apoi încă 3 zile, în 3 casete separate.
-- Vedere simplă, cu precipitații în următoarele 12 ore: caseta „PLOAIE” sau „NINSOARE”
-  (după majoritatea orelor), cu intervalul, maximul și graficul pe ore. Deasupra graficului,
-  „acum” cu o săgeată și o linie punctată arată ora exactă (la 14:20, o treime din bara de 14:00). Bare negre = ploaie,
-  gri închis = ninsoare, gri deschis = fără precipitații.
+- Vedere simplă, cu precipitații în următoarele 12 ore (v2.065): caseta „PLOI” sau „ZĂPADĂ”
+  (după majoritatea orelor), cu intervalul și totalul estimat în mm. Sub ele, 12 casete mici,
+  câte una pe oră: ora, probabilitatea în procente și cantitatea în mm. Orele cu precipitații
+  au fundal gri deschis; orele uscate sunt albe, cu text gri. Ora curentă are chenarul gros.
+  Portret: 6 casete pe 2 rânduri; peisaj: 3 casete pe 4 rânduri.
 - Vedere simplă, fără precipitații: 3 capsule cu următoarele 3 zile. În peisaj apare și
   3 casete separate, aliniate sub capsule. Ele alternează la fiecare 15 minute (ALT_BOXES=1):
   * Soare (răsărit, apus), Indice UV (cifra, sub ea nivelul: „Scăzut” de la 0 la 2, și o scală
@@ -116,7 +131,7 @@ modifici cities.txt, paginile schimbate se desenează nume cu nume, puțin mai �
 Jurnal: meteoalarmkindle.log păstrează ultimele 5 zile (LOG_DAYS). În a 6-a zi, cea mai veche
 zi se șterge; erorile ei trec în meteoalarmkindle-erori.log și rămân acolo până când acel lucru
 (vremea, avertizările, aerul, ora) merge din nou. Fără erori nerezolvate, fișierul nu există.
-La pornire scrie versiunea („start v2.064 …”), iar alegerile din meniul ☰ apar ca „menu: …”.
+La pornire scrie versiunea („start v2.066 …”), iar alegerile din meniul ☰ apar ca „menu: …”.
 Rețeaua apare ca „met:”, „wifi:” și „net:”.
 Dacă se blochează: ține apăsat butonul de pornire ~20 s.
 

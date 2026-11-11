@@ -38,6 +38,13 @@
 					"action": "./bin/meteoalarmkindle.sh",
 					"params": "stop",
 					"exitmenu": true
+				},
+				{
+					"name": "Încarcă o dată la 100%",
+					"priority": 6,
+					"action": "./bin/meteoalarmkindle.sh",
+					"params": "full",
+					"exitmenu": false
 				}
 			]
 		}

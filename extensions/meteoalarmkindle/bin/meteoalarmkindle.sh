@@ -16,7 +16,7 @@
 # While running, pressing the power button exits back to the Kindle UI.
 
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin:/mnt/us/libkh/bin
-VERSION=2.066
+VERSION=2.067
 
 DIR=$(cd "$(dirname "$0")/.." && pwd)
 . "$DIR/meteoalarmkindle.conf"
@@ -112,7 +112,7 @@ load_lang() {
 		T_UPDATING="updating…" T_RETURN="Returning to Kindle…" T_WIFI="restarting Wi-Fi…"
 		T_LIGHTT=LIGHT T_LIGHTOFF="LIGHT OFF" T_LIGHTH1="Swipe up or down" T_LIGHTH2="on the left edge of the screen." T_PICK="Choose county" T_PICKTOWN="choose town"
 		T_BACK=Back T_PAGE=Page T_CLOSE=Close T_NEXT=Next
-		T_FEELS="Feels like" T_WIND=Wind T_HI=High T_LO=Low T_CHARGING=Charging T_CHARGEME="Charge me" T_PROTECT="Protected ${CHARGE_LIMIT:-80}%"
+		T_FEELS="Feels like" T_WIND=Wind T_HI=High T_LO=Low T_CHARGING=Charging T_CHARGEME="Charge me" T_PROTECT="Battery protection ON"
 		T_WARN="YELLOW ORANGE RED" T_WARNCODE=WARNING T_WARNSRC="Source: MeteoAlarm, ANM" T_NOWARN="NO WEATHER WARNINGS"
 		T_DAY1=TOMORROW T_DAY2="DAY AFTER" T_NEXT12="NEXT 12 HOURS" T_NOWMARK=now T_RAINUP=RAIN T_SNOWUP=SNOW T_TOTAL=total
 		T_LEGSNOW=snow T_LEGRAIN=rain T_LEGDRY="no precipitation" T_POP=rain
@@ -120,7 +120,7 @@ load_lang() {
 		T_UVLV="Low|Moderate|High|Very high|Extreme" T_POLLV="Low|Moderate|High|Very high"
 		T_NOPOLLEN="no pollen" T_NODATA2="no data"
 		T_HUM=HUMIDITY T_HUMLV="Very dry|Dry|Comfortable|Humid|Very humid"
-		T_MOON=MOON T_PRESS=PRESSURE T_PRESSTR="rising|steady|falling" T_AQI=AQI
+		T_MOON=MOON T_PRESS=PRESSURE T_PRESSTR="fair weather|steady|bad weather" T_AQI=AQI
 		T_AQILV="Good|Fair|Moderate|Poor|Very poor|Extremely poor"
 		T_M_FLIP="Rotate screen 180°" T_M_VIEW="View:" T_V_SIMPLE=simple T_V_LIST="5-day list"
 		T_M_ORIENT="Orientation:" T_O_P=portrait T_O_L=landscape T_M_REFRESH="Refresh weather"
@@ -133,7 +133,7 @@ load_lang() {
 		T_UPDATING="se actualizează…" T_RETURN="Revenire la Kindle…" T_WIFI="repornesc Wi-Fi…"
 		T_LIGHTT=LUMINA T_LIGHTOFF="LUMINA STINSĂ" T_LIGHTH1="Glisează în sus sau în jos" T_LIGHTH2="pe marginea stângă a ecranului." T_PICK="Alege județul" T_PICKTOWN="alege localitatea"
 		T_BACK=Înapoi T_PAGE=Pagina T_CLOSE=Închide T_NEXT=Înainte
-		T_FEELS=Resimțit T_WIND=Vânt T_HI=Max T_LO=Min T_CHARGING="Se încarcă" T_CHARGEME="Încarcă bateria" T_PROTECT="Protecție ${CHARGE_LIMIT:-80}%"
+		T_FEELS=Resimțit T_WIND=Vânt T_HI=Max T_LO=Min T_CHARGING="Se încarcă" T_CHARGEME="Încarcă bateria" T_PROTECT="Protecție baterie ON"
 		T_WARN="GALBEN PORTOCALIU ROȘU" T_WARNCODE=COD T_WARNSRC="Sursa: MeteoAlarm, ANM" T_NOWARN="FĂRĂ AVERTIZĂRI METEO"
 		T_DAY1=MÂINE T_DAY2=POIMÂINE T_NEXT12="URMĂTOARELE 12 ORE" T_NOWMARK=acum T_RAINUP=PLOI T_SNOWUP=ZĂPADĂ T_TOTAL=total
 		T_LEGSNOW=ninsoare T_LEGRAIN=ploaie T_LEGDRY="fără precipitații" T_POP=ploaie
@@ -141,7 +141,7 @@ load_lang() {
 		T_UVLV="Scăzut|Moderat|Ridicat|Foarte ridicat|Extrem" T_POLLV="Scăzut|Moderat|Ridicat|Foarte ridicat"
 		T_NOPOLLEN="fără polen" T_NODATA2="fără date"
 		T_HUM=UMIDITATE T_HUMLV="Foarte uscat|Uscat|Confortabil|Umed|Foarte umed"
-		T_MOON=LUNA T_PRESS=PRESIUNE T_PRESSTR="în creștere|stabilă|în scădere" T_AQI=ICA
+		T_MOON=LUNA T_PRESS=PRESIUNE T_PRESSTR="vreme bună|stabilă|vreme rea" T_AQI=ICA
 		T_AQILV="Bun|Acceptabil|Moderat|Slab|Foarte slab|Extrem de slab"
 		T_M_FLIP="Întoarce ecranul 180°" T_M_VIEW="Vedere:" T_V_SIMPLE=simplă T_V_LIST="listă 5 zile"
 		T_M_ORIENT="Orientare:" T_O_P=portret T_O_L=peisaj T_M_REFRESH="Actualizează vremea"
@@ -323,7 +323,7 @@ fetch_weather() {
 	tz_enc=$(echo "$TZ_IANA" | sed 's#/#%2F#g')
 	url="http://api.open-meteo.com/v1/forecast?latitude=$LATITUDE&longitude=$LONGITUDE"
 	url="$url&current=temperature_2m,weather_code,precipitation,is_day,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,apparent_temperature,wind_speed_10m,relative_humidity_2m,pressure_msl"
-	url="$url&hourly=precipitation_probability,precipitation,weather_code,snowfall"
+	url="$url&hourly=precipitation_probability,precipitation,weather_code,snowfall,pressure_msl"
 	url="$url&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,sunrise,sunset,uv_index_max"
 	url="$url&forecast_days=6&forecast_hours=$RAIN_LOOKAHEAD_HOURS&timezone=$tz_enc"
 	[ -n "$MODEL" ] && url="$url&models=$MODEL"
@@ -407,6 +407,16 @@ fetch_weather() {
 	case $uv in null | "") uv="" ;; *) uv=$(round "$uv") ;; esac
 	[ -n "$hum" ] && hum=$(round "$hum")
 	press_trend
+	# What the barometer says for the next hours (v2.067): the forecast pressure four hours on
+	# (the 5th hourly value; the 1st is this hour) against the current one. Rising 1 hPa or more
+	# = fair weather, falling 1 hPa or more = bad weather, else steady. Without it (or with MET
+	# Norway) the trend of the last three hours says the same.
+	pfc=$(json_arr "$hourly" pressure_msl | cut -d, -f5)
+	case $pfc in
+	"" | null) ;;
+	*) [ -n "$press" ] && ptr=$(awk -v a="$press" -v b="$pfc" 'BEGIN { d = b - a; print (d >= 1) ? 1 : (d <= -1) ? 3 : 2 }')
+		log "pressure: now $press, in 4 h $pfc hPa, outlook $ptr" ;;
+	esac
 
 	# The next five days (today, the first entry, is skipped): weekday names and day of the
 	# month (computed here; BusyBox date cannot parse dates), weather codes, rounded high/low
@@ -1423,6 +1433,22 @@ draw_now_side() {
 	draw_temp_at $((nd_mid + 2 - T_W)) $((nd_cy + t_dh / 2))
 }
 
+# With warning codes: the free area LEFT..RIGHT x TOP..BOTTOM split in two equal halves side
+# by side, the temperature centred (both ways) in the left one and the icon centred in the
+# right one (v2.067). draw_now_pair LEFT TOP RIGHT BOTTOM PX
+draw_now_pair() {
+	np_mid=$((($1 + $3) / 2)) np_cy=$((($2 + $4) / 2)) np_hw=$((($3 - $1) / 2)) np_h=$(($4 - $2))
+	IC_LEFT=$((np_mid + 4)) IC_RIGHT=$(($3 + 8)) IC_PCT=97 IC_TOP=$(($2 + 2))
+	draw_icon_c $((np_mid + np_hw / 2)) "$np_cy" 200 $((np_h / 2 - 6)) $((np_hw - 12))
+	IC_TOP=0
+	# The digits no higher than the area minus room for the "°" above them.
+	np_p=$5
+	[ $((np_p * 64 / 100)) -gt $((np_h * 80 / 100)) ] && np_p=$((np_h * 80 * 100 / 6400))
+	temp_size "$np_p" $((np_hw - 6))
+	t_dh=$((t_p * 64 / 100))
+	draw_temp_at $(($1 + (np_hw - T_W) / 2)) $((np_cy + t_dh / 2))
+}
+
 # Weekday and date, right-aligned under the clock.
 draw_date() {
 	fb_rtext "$F_REG" 26 "$DATE_Y" "$DATE_R" "$(ro_date)"
@@ -1776,7 +1802,7 @@ draw_sun_box() {
 	fb_ctext "$F_REG" 20 579 590 "$T_SUNSET"
 	fb_ctext "$F_BOLD" 29 603 590 "$(clock_fmt "$sb_s")"
 	if [ "$sb_1" = "$T_MOON" ]; then
-		# Pressure: the number, "hPa" and the trend (after three hours of readings).
+		# Pressure: the number, "hPa" and what comes in the next 4 hours (fair / steady / bad).
 		if [ -n "$W_PRESS" ]; then
 			pr_p=$(fit_px "$F_BOLD" 74 122 "$W_PRESS")
 			fb_ctext "$F_BOLD" "$pr_p" $((511 + (74 - pr_p) * 7 / 10)) 750 "$W_PRESS"
@@ -1915,14 +1941,9 @@ draw_landscape() {
 		# texts.
 		draw_now_split 270 57 488 430 82 67
 	else
-		draw_temp 54 466 172 259
-		ic_cy=$((466 - t_p * 32 / 100))
-		ic_hh=$((488 - ic_cy))
-		[ $((ic_cy - WARN_BOT - 10)) -lt "$ic_hh" ] && ic_hh=$((ic_cy - WARN_BOT - 10))
-		# 97%: at full size the sun's rays touched the "C".
-		IC_LEFT=$((TEMP_END + 2)) IC_RIGHT=496 IC_PCT=97 IC_TOP=$((WARN_BOT + 4)) IC_FIT=1 IC_BOT=484
-		draw_icon_c $(((TEMP_END + 490) / 2)) "$ic_cy" 200 "$ic_hh" $((490 - TEMP_END - 12))
-		IC_TOP=0 IC_FIT=0
+		# Codes (1 or 2): the free area under them split in two halves side by side, the
+		# temperature centred in the left one and the icon in the right one (v2.067).
+		draw_now_pair 50 $((WARN_BOT + 4)) 490 484 172
 	fi
 	# Under the description: "Resimțit", max / min, wind; then the city.
 	dpx=$(fit_px "$F_BOLD" 42 420 "$NOW_DESC")
@@ -1992,23 +2013,35 @@ draw_status() {
 		fb_rect $((gy + 6)) $((gx + 40)) 4 8 BLACK
 		fb_rtext "$F_BOLD" 26 $((gy - 4)) $((gx - 7)) "$ST_LVL%"
 		bat_left=$RTEXT_LEFT
+		# Protection, charging or "charge me": one white rounded box (like the code boxes), the
+		# same size for all three, so a new message covers the previous one (v2.067).
 		msg=""
-		if [ "$ST_PROT" = 1 ]; then
+		# Without the charger no box, except "charge me" under BATT_LOW (25%).
+		if [ "$ST_PROT" = 1 ] && [ "$ST_CHG" = 1 ]; then
 			# Charging stopped by the protection (powerd still says "charging").
 			msg=$T_PROTECT
 		elif [ "$ST_CHG" = 1 ]; then
-			fb_image "$DIR/icons/bolt.png" $((bat_left - 16)) $((gy + 2)) 11 17
-			bat_left=$((bat_left - 16))
 			msg=$T_CHARGING
 		elif [ "$ST_LVL" -lt "${BATT_LOW:-25}" ]; then
 			msg=$T_CHARGEME
 		fi
 		if [ -n "$msg" ]; then
-			# Both messages are drawn in the cleared status zone (ST1), smaller if needed.
 			set -- $ST1
-			mpx=$(fit_px "$F_BOLD" 26 $((bat_left - 10 - $2 - 4)) "$msg")
-			fb_rtext "$F_BOLD" "$mpx" $((gy - 4 + (26 - mpx) * 81 / 100)) $((bat_left - 10)) "$msg"
-			bat_left=$RTEXT_LEFT
+			pmax=$((bat_left - 10 - $2 - 4))
+			ppx=24
+			for pt in "$T_PROTECT" "$T_CHARGING" "$T_CHARGEME"; do
+				ppx=$(fit_px "$F_BOLD" "$ppx" $((pmax - 20)) "$pt")
+			done
+			pw=0
+			for pt in "$T_PROTECT" "$T_CHARGING" "$T_CHARGEME"; do
+				ptw=$(tw_c "$F_BOLD" "$ppx" "$pt")
+				[ "$ptw" -gt "$pw" ] && pw=$ptw
+			done
+			pw=$((pw + 20))
+			px0=$((bat_left - 12 - pw))
+			fb_pill $((gy - 6)) "$px0" "$pw" 36 WHITE
+			fb_ctext "$F_BOLD" "$ppx" $((gy - 6 + (36 - ppx) / 2)) $((px0 + pw / 2)) "$msg" -O
+			bat_left=$px0
 		fi
 	fi
 	font=$F_REG color=GRAY5 upd=""
@@ -2049,7 +2082,7 @@ set_bands() {
 		BAT_R=836 BAT_Y=702 UPD_R=984 UPD_Y=111
 		# ST1 reaches the left edge of the right column, so the longest battery message
 		# ("Încarcă bateria") is wiped too when it changes.
-		ST1="694 516 320 40" ST2="108 520 464 32"
+		ST1="694 506 330 40" ST2="108 520 464 32"
 		SW_TOP=60 SW_BOT=700
 	else
 		CLK_PX=50 CLOCK_TOP=17 CLK_R=561 CLK_L=330 CLOCK_H=50 DATE_Y=71 DATE_R=567

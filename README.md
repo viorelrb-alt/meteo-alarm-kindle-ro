@@ -2,7 +2,7 @@
 
 Turn an old **Kindle Paperwhite 1** into a **weather clock with official weather warnings**. It runs on the Kindle itself. No server, no extra hardware, no API key.
 
-**Latest version: v2.066** · [Download the zip](download/MeteoAlarmKindle-v2.066.zip?raw=1) · [Changelog](docs/CHANGELOG.md) · [Install](docs/INSTALL.md) · [Română](#în-limba-română)
+**Latest version: v2.067** · [Download the zip](download/MeteoAlarmKindle-v2.067.zip?raw=1) · [Changelog](docs/CHANGELOG.md) · [Install](docs/INSTALL.md) · [Română](#în-limba-română)
 
 <p>
   <img src="docs/images/kindle-v206-landscape.jpg" width="58%" alt="Meteo Alarm Kindle on a Kindle Paperwhite 1, landscape, rain view">
@@ -24,9 +24,9 @@ Turn an old **Kindle Paperwhite 1** into a **weather clock with official weather
 - **Two views**: simple, or a 5-day list. **Portrait or landscape**, and a 180° flip for the cable.
 - **MeteoAlarm warnings** (ANM, Romania) for your county: yellow, orange and red codes, shown as gray shades on e-ink. Codes of the same color share one box ("VÂNT, PLOI"). A tap on a box opens one bubble with every code, red first, each type with its own period and what the code means. It shows at once and closes by itself after 5 seconds.
 - **Works through outages**: if Open-Meteo does not answer, the forecast comes from MET Norway. Without network the app restarts the Wi-Fi and retries less often. A 5-day log keeps unsolved errors in a separate file.
-- **Sun, UV index and pollen** boxes in landscape. The UV index comes from the Open-Meteo air quality service and shows in the daytime under a clear or partly cloudy sky; otherwise the box shows humidity. In the simple view the boxes take turns every 15 minutes with **Moon (rise/set), Pressure and Air quality (European AQI)**.
+- **Sun, UV index and pollen** boxes in landscape. The UV index comes from the Open-Meteo air quality service and shows in the daytime under a clear or partly cloudy sky; otherwise the box shows humidity. In the simple view the boxes take turns every 15 minutes with **Moon (rise/set), Pressure and Air quality (European AQI)**. The Pressure box says what the next 4 hours bring: fair weather, steady or bad weather.
 - **315 towns** in all 41 counties and Bucharest. The city shows its county code ("Călărași, CL"). The **favourites are the last 3 cities you chose**. Add your own in `cities.txt`.
-- **Battery protection (Protecție 80%)**: when the Kindle is left on the charger, charging stops at 80% and starts again at 75%, so the battery is not kept full all day. The status bar shows "Protecție 80%". Turn it off from the ☰ menu; KUAL has "Încarcă o dată la 100%" for a full charge. Idea from [ereader-charge-limit](https://github.com/chengandre/ereader-charge-limit) by chengandre, rewritten for the Paperwhite 1.
+- **Battery protection (Protecție 80%)**: when the Kindle is left on the charger, charging stops at 80% and starts again at 75%, so the battery is not kept full all day. The status bar shows "Protecție baterie ON" in a rounded box. Turn it off from the ☰ menu; KUAL has "Încarcă o dată la 100%" for a full charge. Idea from [ereader-charge-limit](https://github.com/chengandre/ereader-charge-limit) by chengandre, rewritten for the Paperwhite 1.
 - **One ☰ menu**: orientation, view, rotate, refresh, °C/°F, 12h/24h, battery protection, Romanian/English. The last used choice moves to the top.
 - **Front light**: swipe up or down on the left edge, like a Kobo. The light button shows a 24-step light bar. Auto light at sunset, at night and on low battery. At 21% battery a lit light blinks 4 times, goes off, and the auto light pauses until the battery is back at 50%.
 - Pop-ups close at once and the clock updates every minute without flashing. A full refresh every 15 minutes clears e-ink ghosting.
@@ -61,9 +61,9 @@ Turn an old **Kindle Paperwhite 1** into a **weather clock with official weather
 
 ## Install
 
-Short version: jailbreak the Kindle, install KUAL, copy the `extensions` folder from the [v2.066 zip](download/MeteoAlarmKindle-v2.066.zip?raw=1) to the Kindle root, then open **KUAL > Meteo Alarm Kindle**. Full steps: [docs/INSTALL.md](docs/INSTALL.md).
+Short version: jailbreak the Kindle, install KUAL, copy the `extensions` folder from the [v2.067 zip](download/MeteoAlarmKindle-v2.067.zip?raw=1) to the Kindle root, then open **KUAL > Meteo Alarm Kindle**. Full steps: [docs/INSTALL.md](docs/INSTALL.md).
 
-Tested on a **Kindle Paperwhite 1, firmware 5.6.1.1**. Each 2.0x version was tested on the Kindle. The 2.066 battery protection was tested on the Kindle on 11 Nov 2026.
+Tested on a **Kindle Paperwhite 1, firmware 5.6.1.1**. Each 2.0x version was tested on the Kindle. The 2.066 battery protection was tested on the Kindle on 11 and 12 Nov 2026 (it held the battery between 75% and 80% all day). The 2.067 layout was checked in PC previews and installed on the Kindle on 12 Nov 2026.
 
 ## Lock screen add-on
 
@@ -95,7 +95,7 @@ Design, ideas and testing on the Kindle: the project owner (Romania). Code: Clau
 
 Ce face:
 - Vremea acum și pe 5 zile (Open-Meteo), cu ploaia pe următoarele 12 ore în casete pe ore (probabilitate și mm).
-- Protecție 80%: când Kindle-ul stă la încărcător, încărcarea se oprește la 80% și pornește din nou la 75%. Se oprește din meniul ☰. Ideea vine de la [ereader-charge-limit](https://github.com/chengandre/ereader-charge-limit) (chengandre), rescrisă pentru Paperwhite 1.
+- Protecție 80%: când Kindle-ul stă la încărcător, încărcarea se oprește la 80% și pornește din nou la 75%. Se oprește din meniul ☰. Ideea vine de la [ereader-charge-limit](https://github.com/chengandre/ereader-charge-limit) (chengandre), rescrisă pentru Paperwhite 1. În bara de jos apare „Protecție baterie ON” într-un chenar rotunjit.
 - Avertizările MeteoAlarm (ANM) pentru județul tău: cod galben, portocaliu și roșu. Codurile de aceeași culoare stau într-o singură casetă. Atingerea unei casete deschide o bulă cu toate codurile, roșu sus, fiecare fenomen cu perioada lui. Bula apare imediat și se închide singură după 5 secunde.
 - Dacă Open-Meteo nu răspunde, prognoza vine de la MET Norway. Fără rețea, aplicația repornește Wi-Fi-ul și reîncearcă mai rar.
 - Portret sau peisaj, vedere simplă sau listă pe 5 zile.
@@ -104,7 +104,7 @@ Ce face:
 - În peisaj: Soare / UV / Polen. UV-ul vine de la serviciul de calitate a aerului și apare ziua, la Senin, Predominant senin sau Parțial noros; altfel apare Umiditatea. În vederea simplă, casetele alternează la 15 minute cu Lună / Presiune / ICA (indicele european de calitate a aerului).
 - Lumina se reglează glisând pe marginea stângă, ca pe Kobo. La 21% baterie, lumina clipește de 4 ori, se stinge, iar aprinderea automată stă pe pauză până la 50%.
 
-Instalare: faci jailbreak, instalezi KUAL, copiezi folderul `extensions` din [arhiva v2.066](download/MeteoAlarmKindle-v2.066.zip?raw=1) în rădăcina Kindle-ului și pornești din KUAL meniul „Meteo Alarm Kindle”. Dacă ai avut o versiune veche, șterge folderul `extensions/rekindle`. Detalii în `extensions/meteoalarmkindle/CITESTE.txt`.
+Instalare: faci jailbreak, instalezi KUAL, copiezi folderul `extensions` din [arhiva v2.067](download/MeteoAlarmKindle-v2.067.zip?raw=1) în rădăcina Kindle-ului și pornești din KUAL meniul „Meteo Alarm Kindle”. Dacă ai avut o versiune veche, șterge folderul `extensions/rekindle`. Detalii în `extensions/meteoalarmkindle/CITESTE.txt`.
 
 Proiectul a fost creat de cineva din România, ca să refolosească un Kindle vechi uitat într-un sertar. A pornit de la proiectul open-source **rekindle** (Chaozhuang22). Designul, ideile și testele pe Kindle îi aparțin autorului. Codul a fost scris de Claude, asistentul AI al companiei Anthropic.
 

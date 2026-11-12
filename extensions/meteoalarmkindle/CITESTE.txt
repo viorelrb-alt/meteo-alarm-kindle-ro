@@ -1,4 +1,4 @@
-METEO ALARM KINDLE: ceas, vreme și avertizări pentru Kindle Paperwhite 1 (v2.066)
+METEO ALARM KINDLE: ceas, vreme și avertizări pentru Kindle Paperwhite 1 (v2.067)
 
 Instalare: copiază folderul "extensions" în rădăcina Kindle-ului (Replace).
 Pornire: KUAL > Meteo Alarm Kindle > alege varianta.
@@ -7,10 +7,21 @@ aplicația nouă preia de acolo orașul, °C/°F, 12/24h și limba.
 
 Variante: vreme simplă sau 5 zile, în portret sau peisaj.
 
+Noutăți v2.067:
+- Peisaj simplu cu 1 sau 2 coduri de avertizare: temperatura și iconul nu mai stau jos. Zona
+  liberă de sub coduri e împărțită în două: temperatura la stânga, iconul la dreapta, ambele
+  centrate.
+- Caseta PRESIUNE spune ce urmează în următoarele 4 ore: „vreme bună” (presiunea crește),
+  „stabilă” sau „vreme rea” (presiunea scade). Se ia presiunea prevăzută peste 4 ore; fără ea,
+  schimbarea din ultimele 3 ore. În jurnal: rânduri „pressure: …”.
+- Bara de jos: un singur chenar rotunjit, mereu de aceeași mărime, lângă procentul bateriei:
+  „Protecție baterie ON”, „Se încarcă” sau „Încarcă bateria” (unul îl înlocuiește pe altul).
+
 Protecție 80% (v2.066): grijă pentru baterie când Kindle-ul stă la încărcător.
 - Cât rulează aplicația și încărcătorul e conectat, încărcarea se oprește la 80% și pornește
   din nou la 75%. Între timp Kindle-ul merge din baterie (cam o oră de la 80% la 75%).
-- În bara de jos scrie „Protecție 80%” în loc de „Se încarcă”.
+- În bara de jos scrie „Protecție baterie ON” cât încărcarea e oprită de protecție (80%→75%);
+  când se încarcă (și 75%→80%) scrie „Se încarcă”. Din v2.067; înainte „Protecție 80%”.
 - Încărcarea pornește din nou singură când scoți încărcătorul, când oprești protecția și când
   ieși din aplicație.
 - Meniul ☰ are un rând nou (al 8-lea): „Protecție 80%: oprește” / „pornește”.
@@ -131,7 +142,7 @@ modifici cities.txt, paginile schimbate se desenează nume cu nume, puțin mai �
 Jurnal: meteoalarmkindle.log păstrează ultimele 5 zile (LOG_DAYS). În a 6-a zi, cea mai veche
 zi se șterge; erorile ei trec în meteoalarmkindle-erori.log și rămân acolo până când acel lucru
 (vremea, avertizările, aerul, ora) merge din nou. Fără erori nerezolvate, fișierul nu există.
-La pornire scrie versiunea („start v2.066 …”), iar alegerile din meniul ☰ apar ca „menu: …”.
+La pornire scrie versiunea („start v2.067 …”), iar alegerile din meniul ☰ apar ca „menu: …”.
 Rețeaua apare ca „met:”, „wifi:” și „net:”.
 Dacă se blochează: ține apăsat butonul de pornire ~20 s.
 

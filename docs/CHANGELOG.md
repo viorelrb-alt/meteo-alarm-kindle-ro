@@ -1,4 +1,4 @@
-# Meteo Alarm Kindle: changelog (latest: v2.066)
+# Meteo Alarm Kindle: changelog (latest: v2.067)
 
 Weather clock with MeteoAlarm warnings for the Kindle Paperwhite 1: a KUAL extension (shell
 script + FBInk). It runs through KUAL (Kindle Unified Application Launcher) and grew out of
@@ -7,8 +7,24 @@ Weather, UV index, air quality and pollen from Open-Meteo (MET Norway as the fal
 
 ## Version
 
-2.066: Protecție 80% (battery care on the charger). 2.065: the 12-hour precipitation chart becomes 12 small hourly boxes (hour, probability, amount), titled PLOI or ZĂPADĂ. 2.064: codes of the same color in one box, one details bubble for all codes that shows at once and closes by itself after 5 s. 2.063: MET Norway fallback forecast, automatic Wi-Fi restart and slower retries without network, warnings of the same color and period in one box with a details bubble, 5-day log with a separate file of unsolved errors. 2.062: UV index from the air quality service (humidity without it), moon / pressure / air quality boxes, low-battery light blink and pause. 2.061: portrait no-codes layout side by side, ☰ menu order, fixes from the 2.06 log. 2.06: menus close at once, Kobo-style light bar, battery text fix, version in the log. 2.055: larger box titles, separate boxes, capitals for the info lines, icon fixes. 2.054: no-codes layout, "now" marker, light panel fixes. 2.053: faster city picker, pressed buttons, larger light panel. 2.052: renamed to Meteo Alarm Kindle. 2.051: small design fixes. 2.05: layout fixes after the second Kindle test. 2.04: Back / Close / Next row in the city picker. 2.03: the city picker is a speech bubble. 2.02: fixes from the first test on the Kindle. 2.01 was the first release of the new interface (2.xx).
+2.067: landscape with codes: temperature and icon centred side by side under the codes; Pressure box says what the next 4 hours bring; one rounded status box for "Protecție baterie ON" / charging / charge me. 2.066: Protecție 80% (battery care on the charger). 2.065: the 12-hour precipitation chart becomes 12 small hourly boxes (hour, probability, amount), titled PLOI or ZĂPADĂ. 2.064: codes of the same color in one box, one details bubble for all codes that shows at once and closes by itself after 5 s. 2.063: MET Norway fallback forecast, automatic Wi-Fi restart and slower retries without network, warnings of the same color and period in one box with a details bubble, 5-day log with a separate file of unsolved errors. 2.062: UV index from the air quality service (humidity without it), moon / pressure / air quality boxes, low-battery light blink and pause. 2.061: portrait no-codes layout side by side, ☰ menu order, fixes from the 2.06 log. 2.06: menus close at once, Kobo-style light bar, battery text fix, version in the log. 2.055: larger box titles, separate boxes, capitals for the info lines, icon fixes. 2.054: no-codes layout, "now" marker, light panel fixes. 2.053: faster city picker, pressed buttons, larger light panel. 2.052: renamed to Meteo Alarm Kindle. 2.051: small design fixes. 2.05: layout fixes after the second Kindle test. 2.04: Back / Close / Next row in the city picker. 2.03: the city picker is a speech bubble. 2.02: fixes from the first test on the Kindle. 2.01 was the first release of the new interface (2.xx).
 The 1.xx series is the old interface (last: 1.35).
+
+## What is new in 2.067
+
+- **Landscape, simple view, with 1 or 2 warning codes**: the temperature and the icon no longer
+  sit at the bottom of the panel. The free area under the codes is split in two halves: the
+  temperature centred in the left one, the icon centred in the right one (draw_now_pair).
+- **Pressure box: what comes next.** Under "hPa" it now says "vreme bună" (fair weather),
+  "stabilă" (steady) or "vreme rea" (bad weather) instead of rising / falling. It compares the
+  current pressure with the Open-Meteo forecast four hours on (hourly pressure_msl): +1 hPa or
+  more = fair, -1 hPa or more = bad. With MET Norway the trend of the last three hours is used.
+  Log lines: "pressure: now ..., in 4 h ..., outlook N".
+- **Status bar: one rounded box, always the same size**, next to the battery level: "Protecție
+  baterie ON" ("Battery protection ON") while the protection holds charging off (80% to 75%),
+  "Se încarcă" while charging (also 75% to 80%), "Încarcă bateria" under 25%. A new message
+  covers the old one. Without the charger only the low-battery box shows. "Protecție 80%"
+  was dropped because it looked like the battery level.
 
 ## What is new in 2.066: Protecție 80%
 

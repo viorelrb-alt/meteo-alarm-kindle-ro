@@ -2,7 +2,7 @@
 
 Turn an old **Kindle Paperwhite 1** into a **weather clock with official weather warnings**. It runs on the Kindle itself. No server, no extra hardware, no API key.
 
-**Latest version: v2.067** · [Download the zip](download/MeteoAlarmKindle-v2.067.zip?raw=1) · [Changelog](docs/CHANGELOG.md) · [Install](docs/INSTALL.md) · [Română](#în-limba-română)
+**Latest version: v2.067** · [Download the zip](Update%20last%20version/MeteoAlarmKindle-v2.067.zip?raw=1) · [Changelog](docs/CHANGELOG.md) · [Install](docs/INSTALL.md) · [Română](#în-limba-română)
 
 <p>
   <img src="docs/images/kindle-v206-landscape.jpg" width="58%" alt="Meteo Alarm Kindle on a Kindle Paperwhite 1, landscape, rain view">
@@ -61,7 +61,9 @@ Turn an old **Kindle Paperwhite 1** into a **weather clock with official weather
 
 ## Install
 
-Short version: jailbreak the Kindle, install KUAL, copy the `extensions` folder from the [v2.067 zip](download/MeteoAlarmKindle-v2.067.zip?raw=1) to the Kindle root, then open **KUAL > Meteo Alarm Kindle**. Full steps: [docs/INSTALL.md](docs/INSTALL.md).
+Short version: jailbreak the Kindle, install KUAL, copy the `extensions` folder from the [v2.067 zip](Update%20last%20version/MeteoAlarmKindle-v2.067.zip?raw=1) to the Kindle root, then open **KUAL > Meteo Alarm Kindle**. Full steps: [docs/INSTALL.md](docs/INSTALL.md).
+
+Folders: [`Update last version/`](Update%20last%20version/) holds only the current release zip; its [`back-up previous version/`](Update%20last%20version/back-up%20previous%20version/) folder holds only the release before it (now v2.066). Older versions are in the [Releases](https://github.com/viorelrb-alt/meteo-alarm-kindle-ro/releases) and in the git history.
 
 Tested on a **Kindle Paperwhite 1, firmware 5.6.1.1**. Each 2.0x version was tested on the Kindle. The 2.066 battery protection was tested on the Kindle on 11 and 12 Nov 2026 (it held the battery between 75% and 80% all day). The 2.067 layout was checked in PC previews and installed on the Kindle on 12 Nov 2026.
 
@@ -104,7 +106,7 @@ Ce face:
 - În peisaj: Soare / UV / Polen. UV-ul vine de la serviciul de calitate a aerului și apare ziua, la Senin, Predominant senin sau Parțial noros; altfel apare Umiditatea. În vederea simplă, casetele alternează la 15 minute cu Lună / Presiune / ICA (indicele european de calitate a aerului).
 - Lumina se reglează glisând pe marginea stângă, ca pe Kobo. La 21% baterie, lumina clipește de 4 ori, se stinge, iar aprinderea automată stă pe pauză până la 50%.
 
-Instalare: faci jailbreak, instalezi KUAL, copiezi folderul `extensions` din [arhiva v2.067](download/MeteoAlarmKindle-v2.067.zip?raw=1) în rădăcina Kindle-ului și pornești din KUAL meniul „Meteo Alarm Kindle”. Dacă ai avut o versiune veche, șterge folderul `extensions/rekindle`. Detalii în `extensions/meteoalarmkindle/CITESTE.txt`.
+Instalare: faci jailbreak, instalezi KUAL, copiezi folderul `extensions` din [arhiva v2.067](Update%20last%20version/MeteoAlarmKindle-v2.067.zip?raw=1) în rădăcina Kindle-ului și pornești din KUAL meniul „Meteo Alarm Kindle”. Dacă ai avut o versiune veche, șterge folderul `extensions/rekindle`. Detalii în `extensions/meteoalarmkindle/CITESTE.txt`. Folderul `Update last version` are doar ultima versiune, iar `back-up previous version` din el are doar versiunea dinainte.
 
 Proiectul a fost creat de cineva din România, ca să refolosească un Kindle vechi uitat într-un sertar. A pornit de la proiectul open-source **rekindle** (Chaozhuang22). Designul, ideile și testele pe Kindle îi aparțin autorului. Codul a fost scris de Claude, asistentul AI al companiei Anthropic.
 

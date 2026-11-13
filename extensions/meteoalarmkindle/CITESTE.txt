@@ -1,4 +1,4 @@
-METEO ALARM KINDLE: ceas, vreme și avertizări pentru Kindle Paperwhite 1 (v2.067)
+METEO ALARM KINDLE: ceas, vreme și avertizări pentru Kindle Paperwhite 1 (v2.068)
 
 Instalare: copiază folderul "extensions" în rădăcina Kindle-ului (Replace).
 Pornire: KUAL > Meteo Alarm Kindle > alege varianta.
@@ -6,6 +6,21 @@ Dacă ai avut o versiune până la v2.051: șterge folderul extensions/rekindle.
 aplicația nouă preia de acolo orașul, °C/°F, 12/24h și limba.
 
 Variante: vreme simplă sau 5 zile, în portret sau peisaj.
+
+Noutăți v2.068:
+- Ploaia în următoarele 12 ore: în loc de cele 12 casete mici (câte una pe oră), casete mari,
+  ca ale zilelor, câte una pentru 3 ore (de ex. 12:00–15:00). Apar doar grupurile de 3 ore în
+  care plouă sau ninge, cel mult 3, cele mai apropiate întâi. În fiecare: intervalul, iconița
+  (ploaie sau zăpadă), șansa cea mai mare, cantitatea în mm și, cu gri, orele cu precipitații.
+  Locurile rămase sunt completate cu zilele următoare. În peisaj, rândul de jos (soare / UV /
+  polen sau lună / presiune / ICA) rămâne. În portret, deasupra casetelor: intervalul ploii și
+  totalul pe 12 ore.
+- Aplicația nu se mai închide singură. Ecranul tactil dă uneori atingeri false în clipa în care
+  tot ecranul se reîmprospătează (la fiecare sfert de oră), mai ales pe marginea de sus; una a
+  nimerit X-ul (12 nov, 20:00). Acum atingerile din cele 2 secunde de după reîmprospătarea
+  întregului ecran sunt ignorate (TAP_QUIET=2), la fel cele de pe marginea de sus a ecranului,
+  sub 34 px (TOP_EDGE=34). X, lumina și ☰ merg ca înainte la o atingere normală. În jurnal:
+  „tap: ignored, screen refresh” / „tap: ignored, top edge”.
 
 Noutăți v2.067:
 - Peisaj simplu cu 1 sau 2 coduri de avertizare: temperatura și iconul nu mai stau jos. Zona
@@ -88,11 +103,8 @@ Ecranul:
   la mijlocul înălțimii cifrelor.
 - Titlurile casetelor (benzile gri) sunt mari și îngroșate, ca să se vadă de la distanță.
 - Vedere 5 zile: Mâine și Poimâine în casete mari, apoi încă 3 zile, în 3 casete separate.
-- Vedere simplă, cu precipitații în următoarele 12 ore (v2.065): caseta „PLOI” sau „ZĂPADĂ”
-  (după majoritatea orelor), cu intervalul și totalul estimat în mm. Sub ele, 12 casete mici,
-  câte una pe oră: ora, probabilitatea în procente și cantitatea în mm. Orele cu precipitații
-  au fundal gri deschis; orele uscate sunt albe, cu text gri. Ora curentă are chenarul gros.
-  Portret: 6 casete pe 2 rânduri; peisaj: 3 casete pe 4 rânduri.
+- Vedere simplă, cu precipitații în următoarele 12 ore (v2.068): casete pe câte 3 ore, doar
+  cele cu ploaie sau ninsoare (cel mult 3), apoi zilele următoare în locurile rămase.
 - Vedere simplă, fără precipitații: 3 capsule cu următoarele 3 zile. În peisaj apare și
   3 casete separate, aliniate sub capsule. Ele alternează la fiecare 15 minute (ALT_BOXES=1):
   * Soare (răsărit, apus), Indice UV (cifra, sub ea nivelul: „Scăzut” de la 0 la 2, și o scală

@@ -16,7 +16,7 @@
 # While running, pressing the power button exits back to the Kindle UI.
 
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin:/mnt/us/libkh/bin
-VERSION=2.067
+VERSION=2.068
 
 DIR=$(cd "$(dirname "$0")/.." && pwd)
 . "$DIR/meteoalarmkindle.conf"
@@ -1539,65 +1539,6 @@ mm_text() {
 	esac
 }
 
-# One small box per forecast hour (2.065, in place of the bar chart): the hour, the
-# probability and the expected amount. Wet hours: light gray box, black text; dry hours: white
-# box with a gray outline, gray text; the current hour has a thick outline. The backgrounds
-# are ui/ora-{ud,uscat}[-acum]-{p,l}.png (tools/make_ui.py).
-# draw_precip_cells LEFT TOP COLS CELL_W CELL_H GAP_X GAP_Y SUFFIX HOUR_PX PROB_PX MM_PX
-#   HOUR_TOP PROB_TOP MM_TOP (the last three: offsets inside the box)
-draw_precip_cells() {
-	gl=$1 gt=$2 gc=$3 gw=$4 gh=$5 gx=$6 gy=$7 gs=$8 g_hp=$9 g_pp=${10} g_mp=${11} g_ht=${12} g_pt=${13} g_mt=${14}
-	nm_h=$(date '+%H')
-	nm_h=${nm_h#0}
-	nm_f=${W_HOURS%%:*}
-	nm_f=${nm_f#0}
-	nm_o=$(((${nm_h:-0} - ${nm_f:-0} + 24) % 24))
-	hrs="$W_HOURS " prs="$W_PROBS " wets="$W_WET " ams="${W_AMTS:-- - - - - - - - - - - -} "
-	ci=0
-	while [ -n "${hrs# }" ] && [ "$ci" -lt 12 ]; do
-		hr=${hrs%% *} hrs=${hrs#* }
-		p=${prs%% *} prs=${prs#* }
-		wet=${wets%% *} wets=${wets#* }
-		am=${ams%% *} ams=${ams#* }
-		[ -n "$hr" ] || break
-		cx=$((gl + (ci % gc) * (gw + gx)))
-		cy=$((gt + (ci / gc) * (gh + gy)))
-		if [ "$wet" = 1 ]; then cb=ud cc=BLACK; else cb=uscat cc=GRAY5; fi
-		[ "$ci" = "$nm_o" ] && cb=$cb-acum
-		fb_image "$DIR/ui/ora-$cb-$gs.png" "$cx" "$cy" "$gw" "$gh"
-		cm=$((cx + gw / 2))
-		fb_ctext "$F_BOLD" "$g_hp" $((cy + g_ht)) "$cm" "$hr" -O -C "$cc"
-		ppx=$(fit_px "$F_BOLD" "$g_pp" $((gw - 8)) "$p%")
-		fb_ctext "$F_BOLD" "$ppx" $((cy + g_pt + (g_pp - ppx) / 2)) "$cm" "$p%" -O -C "$cc"
-		mt=$(mm_text "$am")
-		mpx=$(fit_px "$F_REG" "$g_mp" $((gw - 8)) "$mt")
-		fb_ctext "$F_REG" "$mpx" $((cy + g_mt)) "$cm" "$mt" -O -C "$cc"
-		ci=$((ci + 1))
-	done
-}
-
-# Precipitation box (frame and gray header are in the chrome): title (PLOI or ZĂPADĂ), the
-# rain window and the total amount, then a box for each of the next 12 hours.
-# draw_precip_box LEFT TOP WIDTH HEIGHT HEADER
-draw_precip_box() {
-	pl=$1 pt=$2 pw=$3 ph=$4 phd=$5
-	if [ "$PREC_SNOW" = 1 ]; then pk=$T_SNOWUP; else pk=$T_RAINUP; fi
-	fb_head "$pt" "$phd" $((pl + pw / 2)) $((pw - 40)) "$pk · $T_NEXT12"
-	ptot=""
-	[ -n "$W_AMTS" ] && ptot="$T_TOTAL $(mm_text "${W_RAIN_TOT:-0}")"
-	if [ "$ORIENT" = landscape ]; then
-		[ -n "$ptot" ] && fb_rtext "$F_REG" 26 $((pt + 66)) $((pl + pw - 20)) "$ptot" -C GRAY5
-		rpx=$(fit_px "$F_BOLD" 31 $((pw - 60 - $(tw_c "$F_REG" 26 "$ptot"))) "$rain_text")
-		fb_ltext "$F_BOLD" "$rpx" $((pt + 62 + (31 - rpx) / 2)) $((pl + 20)) "$rain_text"
-		draw_precip_cells $((pl + 16)) $((pt + 102)) 3 138 90 11 10 l 25 36 24 7 32 64
-	else
-		[ -n "$ptot" ] && fb_rtext "$F_REG" 29 $((pt + 66)) $((pl + pw - 20)) "$ptot" -C GRAY5
-		rpx=$(fit_px "$F_BOLD" 36 $((pw - 60 - $(tw_c "$F_REG" 29 "$ptot"))) "$rain_text")
-		fb_ltext "$F_BOLD" "$rpx" $((pt + 60 + (36 - rpx) / 2)) $((pl + 20)) "$rain_text"
-		draw_precip_cells $((pl + 16)) $((pt + 116)) 6 101 112 8 10 p 26 36 25 8 39 78
-	fi
-}
-
 # Day N of the forecast (1 = tomorrow): sets D_WD D_DATE D_HI D_LO D_POP and ICON DESC.
 day_data() {
 	D_WD=$(nth "$1" "$W_D_DAYS")
@@ -1650,13 +1591,62 @@ draw_day_cols() {
 	done
 }
 
-# Capsules for the next three days (simple view without precipitation): weekday and date, icon,
+# Precipitation in groups of 3 hours (2.068, in place of the 12 hourly boxes): one line per
+# group with a wet hour (W_WET), at most three, the nearest first:
+# "FROM TO MAX_PROB MM WET_FROM WET_TO SNOW" (hours as HH:00, MM "-" when unknown, SNOW 1 when
+# most wet hours of the group are snowy).
+rain_groups() {
+	echo "$W_HOURS|$W_PROBS|$W_WET|$W_SNOWY|${W_AMTS:--}" | awk -F'|' '
+		function hh(h) { h = h % 24; return (h < 10 ? "0" h : h) ":00" }
+		{
+			n = split($1, H, " "); split($2, P, " "); split($3, W, " "); split($4, S, " ")
+			na = split($5, A, " ")
+			out = 0
+			for (g = 0; g * 3 < n && out < 3; g++) {
+				mp = 0; mm = 0; wf = -1; wl = -1; sn = 0; nw = 0
+				for (k = g * 3 + 1; k <= g * 3 + 3 && k <= n; k++) {
+					if (P[k] + 0 > mp) mp = P[k] + 0
+					if (na >= k) mm += A[k]
+					if (W[k] == 1) { if (wf < 0) wf = k; wl = k; nw++; if (S[k] == 1) sn++ }
+				}
+				if (wf < 0) continue
+				h0 = substr(H[g * 3 + 1], 1, 2) + 0
+				hl = substr(H[(g * 3 + 3 <= n) ? g * 3 + 3 : n], 1, 2) + 1
+				mt = (na >= n) ? sprintf("%.1f", mm) : "-"
+				print hh(h0), hh(hl), mp, mt, hh(substr(H[wf], 1, 2) + 0), hh(substr(H[wl], 1, 2) + 1), (sn * 2 > nw) ? 1 : 0
+				out++
+			}
+		}'
+}
+
+# The capsule row of the simple view: first a box for each 3-hour group with precipitation
+# (rain_groups, when some is due), then the next days in the boxes left: weekday and date, icon,
 # high / low, description and the chance of rain.
 # draw_capsules LEFT PITCH WIDTH TOP TITLE_PX ICON_TOP ICON TEMP_TOP TEMP_PX DESC_TOP DESC_PX POP_TOP POP_PX
 draw_capsules() {
 	ck=0
+	if [ -n "$rain_text" ]; then
+		rain_groups >"$STATE/raingroups"
+		while read -r rg_f rg_t rg_p rg_m rg_wf rg_wt rg_s; do
+			[ "$ck" -lt 3 ] || break
+			ccx=$(($1 + ck * $2 + $3 / 2))
+			fb_head "$4" "$5" "$ccx" $(($3 - 28)) "$rg_f–$rg_t"
+			if [ "$rg_s" = 1 ]; then ICON=snow rg_w=$T_LEGSNOW; else ICON=rain rg_w=$T_LEGRAIN; fi
+			draw_icon $((ccx - $7 / 2)) "$6" "$7"
+			ctp=$(fit_px "$F_BOLD" "$9" $(($3 - 14)) "$rg_p%")
+			fb_ctext "$F_BOLD" "$ctp" $(($8 + ($9 - ctp) * 6 / 10)) "$ccx" "$rg_p%" -O
+			rg_mt=$(mm_text "$rg_m")
+			cdp=$(fit_px "$F_REG" "${11}" $(($3 - 12)) "$rg_mt")
+			fb_ctext "$F_REG" "$cdp" "${10}" "$ccx" "$rg_mt" -O
+			rg_l="$rg_w $rg_wf–$rg_wt"
+			cpp=$(fit_px "$F_REG" "${13}" $(($3 - 12)) "$rg_l")
+			fb_ctext "$F_REG" "$cpp" "${12}" "$ccx" "$rg_l" -O -C GRAY5
+			ck=$((ck + 1))
+		done <"$STATE/raingroups"
+	fi
+	cd_n=1
 	while [ "$ck" -lt 3 ]; do
-		day_data $((ck + 1))
+		day_data "$cd_n"
 		[ -n "$D_WD" ] || break
 		ccx=$(($1 + ck * $2 + $3 / 2))
 		fb_head "$4" "$5" "$ccx" $(($3 - 28)) "$(wd_upper "$D_WD") $D_DATE"
@@ -1666,7 +1656,7 @@ draw_capsules() {
 		cdp=$(fit_px "$F_REG" "${11}" $(($3 - 12)) "$DESC")
 		fb_ctext "$F_REG" "$cdp" "${10}" "$ccx" "$DESC" -O
 		fb_ctext "$F_REG" "${13}" "${12}" "$ccx" "$T_POP $D_POP%" -O -C GRAY5
-		ck=$((ck + 1))
+		ck=$((ck + 1)) cd_n=$((cd_n + 1))
 	done
 }
 
@@ -1869,7 +1859,6 @@ draw_swipe_dots() {
 draw_portrait() {
 	if [ -z "$ST_FETCHED" ]; then chrome=p-antet
 	elif [ "$LAYOUT" = weather ]; then chrome=p-5zile
-	elif [ -n "$rain_text" ]; then chrome=p-ploaie
 	else chrome=p-simplu; fi
 	draw_chrome "$chrome"
 	draw_swipe_dots
@@ -1883,7 +1872,7 @@ draw_portrait() {
 	cpx=$(fit_px "$F_BOLD" $TXT_CITY 340 "$CITY_LABEL")
 	fb_ltext "$F_BOLD" "$cpx" 116 40 "$CITY_LABEL"
 	fy=494
-	[ "$chrome" = p-simplu ] && fy=511
+	[ "$chrome" = p-simplu ] && [ -z "$rain_text" ] && fy=511
 	draw_warnings
 	# Line under the clock, up to the first warning box (which touches it).
 	fb_rect 102 40 $((HDR_END - 40)) 2 BLACK
@@ -1910,10 +1899,15 @@ draw_portrait() {
 		draw_day_card 387 2 "$T_DAY2"
 		draw_day_cols 3 32 231 788 838 56 892 38 44
 		;;
-	p-ploaie)
-		draw_precip_box 40 574 678 364 46
-		;;
 	*)
+		if [ -n "$rain_text" ]; then
+			# The rain window and the total over 12 hours, over the boxes (2.068).
+			ptot=""
+			[ -n "$W_AMTS" ] && ptot="$T_TOTAL $(mm_text "${W_RAIN_TOT:-0}")"
+			[ -n "$ptot" ] && fb_rtext "$F_REG" 28 576 712 "$ptot" -C GRAY5
+			rpx=$(fit_px "$F_BOLD" 30 $((660 - $(tw_c "$F_REG" 28 "$ptot"))) "$rain_text")
+			fb_ltext "$F_BOLD" "$rpx" $((575 + (30 - rpx) / 2)) 46 "$rain_text"
+		fi
 		draw_capsules 40 231 215 616 44 668 98 776 41 838 26 873 23
 		;;
 	esac
@@ -1925,7 +1919,6 @@ draw_portrait() {
 draw_landscape() {
 	if [ -z "$ST_FETCHED" ]; then chrome=l-antet
 	elif [ "$LAYOUT" = weather ]; then chrome=l-5zile
-	elif [ -n "$rain_text" ]; then chrome=l-ploaie
 	else chrome=l-simplu; fi
 	draw_chrome "$chrome"
 	draw_swipe_dots
@@ -1965,9 +1958,6 @@ draw_landscape() {
 			fb_ctext "$F_BOLD" "$ltp" $((332 + (50 - ltp) * 6 / 10)) $((lx + 113)) "$D_HI° / $D_LO°" -O
 		done
 		draw_day_cols 3 510 160 416 488 82 606 36 46
-		;;
-	l-ploaie)
-		draw_precip_box 516 156 468 506 46
 		;;
 	*)
 		draw_capsules 516 160 148 156 46 216 86 311 31 357 22 391 21
@@ -2215,11 +2205,16 @@ finish_draw() {
 		draw_warn_popup || rm -f "$STATE/menu"
 		;;
 	esac
+	# The touch panel reports false taps while the whole screen refreshes (2.068: the log had
+	# taps at the screen's top edge at each quarter hour, two of them on ✕, which closed the
+	# app). touch_watch ignores taps up to TAP_QUIET seconds after this mark.
+	date +%s >"$STATE/refreshing"
 	if [ "$flash" = 1 ]; then
 		fbink -q -f -s >/dev/null 2>&1
 	else
 		fbink -q -s >/dev/null 2>&1
 	fi
+	date +%s >"$STATE/refreshing"
 	# The warnings bubble, drawn ahead for a quick tap (not while something is open on top).
 	if [ -f "$STATE/picker" ] || [ -f "$STATE/menu" ]; then
 		rm -f "$STATE/warnpop.band"
@@ -3229,7 +3224,14 @@ touch_watch() {
 			cy=$(((ty - OY) * 1000 / S))
 			popup=$(cut -d' ' -f1 "$STATE/menu" 2>/dev/null)
 			log "tap $rx,$ry -> $cx,$cy ($ORIENT, rotation ${rota:-?}${popup:+, $popup open})"
-			if [ -f "$STATE/picker" ]; then
+			tq=$(cat "$STATE/refreshing" 2>/dev/null)
+			if [ -n "$tq" ] && [ $(($(date +%s) - tq)) -le "${TAP_QUIET:-2}" ]; then
+				log "tap: ignored, screen refresh"
+			elif [ "$cy" -lt "${TOP_EDGE:-34}" ] && [ -z "$popup" ] && [ ! -f "$STATE/picker" ]; then
+				# False taps also hug the top edge (y 19-31 in the log), even at night; real
+				# taps on the buttons there (✕, light) land lower, at y 40-50.
+				log "tap: ignored, top edge"
+			elif [ -f "$STATE/picker" ]; then
 				picker_tap "$cx" "$cy"
 			elif [ "$popup" = main ]; then
 				if [ "$cx" -ge "$MENU_X" ] && [ "$cx" -lt $((MENU_X + MENU_W)) ] && [ "$cy" -ge "$MENU_Y" ] && [ "$cy" -lt $((MENU_Y + MENU_H)) ]; then

@@ -1,4 +1,4 @@
-# Meteo Alarm Kindle: changelog (latest: v2.067)
+# Meteo Alarm Kindle: changelog (latest: v2.068)
 
 Weather clock with MeteoAlarm warnings for the Kindle Paperwhite 1: a KUAL extension (shell
 script + FBInk). It runs through KUAL (Kindle Unified Application Launcher) and grew out of
@@ -7,8 +7,24 @@ Weather, UV index, air quality and pollen from Open-Meteo (MET Norway as the fal
 
 ## Version
 
-2.067: landscape with codes: temperature and icon centred side by side under the codes; Pressure box says what the next 4 hours bring; one rounded status box for "Protecție baterie ON" / charging / charge me. 2.066: Protecție 80% (battery care on the charger). 2.065: the 12-hour precipitation chart becomes 12 small hourly boxes (hour, probability, amount), titled PLOI or ZĂPADĂ. 2.064: codes of the same color in one box, one details bubble for all codes that shows at once and closes by itself after 5 s. 2.063: MET Norway fallback forecast, automatic Wi-Fi restart and slower retries without network, warnings of the same color and period in one box with a details bubble, 5-day log with a separate file of unsolved errors. 2.062: UV index from the air quality service (humidity without it), moon / pressure / air quality boxes, low-battery light blink and pause. 2.061: portrait no-codes layout side by side, ☰ menu order, fixes from the 2.06 log. 2.06: menus close at once, Kobo-style light bar, battery text fix, version in the log. 2.055: larger box titles, separate boxes, capitals for the info lines, icon fixes. 2.054: no-codes layout, "now" marker, light panel fixes. 2.053: faster city picker, pressed buttons, larger light panel. 2.052: renamed to Meteo Alarm Kindle. 2.051: small design fixes. 2.05: layout fixes after the second Kindle test. 2.04: Back / Close / Next row in the city picker. 2.03: the city picker is a speech bubble. 2.02: fixes from the first test on the Kindle. 2.01 was the first release of the new interface (2.xx).
+2.068: rain in 3-hour boxes shaped like the day boxes (only the wet ones, the next days fill the rest); false taps during a full screen refresh and on the top edge are ignored (one closed the app). 2.067: landscape with codes: temperature and icon centred side by side under the codes; Pressure box says what the next 4 hours bring; one rounded status box for "Protecție baterie ON" / charging / charge me. 2.066: Protecție 80% (battery care on the charger). 2.065: the 12-hour precipitation chart becomes 12 small hourly boxes (hour, probability, amount), titled PLOI or ZĂPADĂ. 2.064: codes of the same color in one box, one details bubble for all codes that shows at once and closes by itself after 5 s. 2.063: MET Norway fallback forecast, automatic Wi-Fi restart and slower retries without network, warnings of the same color and period in one box with a details bubble, 5-day log with a separate file of unsolved errors. 2.062: UV index from the air quality service (humidity without it), moon / pressure / air quality boxes, low-battery light blink and pause. 2.061: portrait no-codes layout side by side, ☰ menu order, fixes from the 2.06 log. 2.06: menus close at once, Kobo-style light bar, battery text fix, version in the log. 2.055: larger box titles, separate boxes, capitals for the info lines, icon fixes. 2.054: no-codes layout, "now" marker, light panel fixes. 2.053: faster city picker, pressed buttons, larger light panel. 2.052: renamed to Meteo Alarm Kindle. 2.051: small design fixes. 2.05: layout fixes after the second Kindle test. 2.04: Back / Close / Next row in the city picker. 2.03: the city picker is a speech bubble. 2.02: fixes from the first test on the Kindle. 2.01 was the first release of the new interface (2.xx).
 The 1.xx series is the old interface (last: 1.35).
+
+## What is new in 2.068
+
+- **Rain and snow in 3-hour boxes.** The 12 small hourly boxes are gone. The next 12 hours are
+  split in four groups of 3 hours; each group with a wet hour (chance ≥ 60% or ≥ 0.1 mm) gets a
+  box shaped like the day boxes: the hours in the gray band (e.g. 12:00–15:00), a rain or snow
+  icon, the highest chance, the amount in mm and, in gray, the wet hours. At most 3 boxes, the
+  nearest first; the places left show the next days. In landscape the lower row (sun / UV /
+  pollen or moon / pressure / AQI) stays. In portrait the rain window and the 12-hour total
+  stay on one line above the boxes. Code: rain_groups, draw_capsules.
+- **The app no longer closes by itself.** The log of 12 Nov showed a tap nobody made on ✕ at
+  20:00:09, in the very second the whole screen refreshed (the same on 8 Nov at 21:15:09). The
+  log had 26 such false taps at the quarter-hour refresh, 20 of them on the top edge (y 19-31),
+  while real taps on ✕ land at y 40-50. Now taps are ignored up to 2 s after a whole-screen
+  refresh (TAP_QUIET=2) and on the top edge, under 34 px (TOP_EDGE=34), when no menu is open.
+  Log lines: "tap: ignored, screen refresh" / "tap: ignored, top edge".
 
 ## What is new in 2.067
 
